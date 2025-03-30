@@ -210,6 +210,9 @@ class AddTimerPageState extends State<AddTimerPage> {
                             focusNode: minutesFocusNode,
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(labelText: "Minutes"),
+                            onSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(upgradeFocusNode);
+                            },
                           ),
                         ),
                       ],
@@ -228,9 +231,6 @@ class AddTimerPageState extends State<AddTimerPage> {
                         border: OutlineInputBorder(), // Adds a border around the field
                         hintText: "",
                       ),
-                      onSubmitted: (_) {
-                        FocusScope.of(context).requestFocus(daysFocusNode);
-                      },
                     ),
                   ],
                 ),
@@ -256,10 +256,19 @@ class AddTimerPageState extends State<AddTimerPage> {
                     final duration = Duration(days: days, hours: hours, minutes: minutes);
                     final expiry = DateTime.now().add(duration);
 
-                    // Ensure user entered a valid duration
+                    // Data validation
+                    // Duration
                     if (duration.inSeconds <= 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Please enter a valid time duration")),
+                      );
+                      return;
+                    }
+
+                    // Other Shit
+                    if (selectedPlayer.isEmpty || selectedVillage.isEmpty || upgrade.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Please fill in all fields")),
                       );
                       return;
                     }
