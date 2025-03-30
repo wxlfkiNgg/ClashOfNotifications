@@ -123,6 +123,16 @@ class AddTimerPageState extends State<AddTimerPage> {
                           ),
                           child: const Text('P.L.U.C.K.'),
                         ),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () => setState(() => selectedPlayer = 'Cesar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: selectedPlayer == 'Cesar' ? Colors.green : Colors.grey[300],
+                            foregroundColor: selectedPlayer == 'Cesar' ? Colors.white : Colors.black,
+                            minimumSize: const Size(double.infinity, 40),
+                          ),
+                          child: const Text('Cesar'),
+                        ),
                       ],
                     ),
 
@@ -156,24 +166,7 @@ class AddTimerPageState extends State<AddTimerPage> {
                       ],
                     ),
 
-                    const SizedBox(height: 20),
-
-                    const Text("Upgrade:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    TextField(
-                      textCapitalization: TextCapitalization.words,
-                      controller: upgradeController,
-                      focusNode: upgradeFocusNode,
-                      maxLines: 1, // Allows multi-line input
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(), // Adds a border around the field
-                        hintText: "",
-                      ),
-                      onSubmitted: (_) {
-                        FocusScope.of(context).requestFocus(daysFocusNode);
-                      },
-                    ),
-
+                    
                     const SizedBox(height: 20),
 
                     // Timer Input Section
@@ -221,6 +214,24 @@ class AddTimerPageState extends State<AddTimerPage> {
                         ),
                       ],
                     ),
+
+                    const SizedBox(height: 20),
+
+                    const Text("Upgrade:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      textCapitalization: TextCapitalization.words,
+                      controller: upgradeController,
+                      focusNode: upgradeFocusNode,
+                      maxLines: 1, // Allows multi-line input
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(), // Adds a border around the field
+                        hintText: "",
+                      ),
+                      onSubmitted: (_) {
+                        FocusScope.of(context).requestFocus(daysFocusNode);
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -239,7 +250,7 @@ class AddTimerPageState extends State<AddTimerPage> {
                     final upgrade = upgradeController.text;
                     final days = int.tryParse(daysController.text) ?? 0;
                     final hours = int.tryParse(hoursController.text) ?? 0;
-                    final minutes = (int.tryParse(minutesController.text) ?? 0) + 1; // Add 1 minute to ensure the timer is set in the future
+                    final minutes = (int.tryParse(minutesController.text) ?? 0);
 
                     // Calculate expiry time
                     final duration = Duration(days: days, hours: hours, minutes: minutes);
