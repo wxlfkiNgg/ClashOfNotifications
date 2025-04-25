@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:clashofnotifications/helpers/database_helper.dart'; // Adjust path as needed
 import 'package:clashofnotifications/models/timer_model.dart'; // Adjust path as needed
 
-class AddTimerPage extends StatefulWidget {
+class TimerPage extends StatefulWidget {
   final TimerModel? timer;
-  const AddTimerPage({super.key, this.timer});
+  const TimerPage({super.key, this.timer});
 
   @override
-  AddTimerPageState createState() => AddTimerPageState();
+  TimerPageState createState() => TimerPageState();
 }
 
-class AddTimerPageState extends State<AddTimerPage> {
+class TimerPageState extends State<TimerPage> {
   TextEditingController upgradeController = TextEditingController();
   TextEditingController daysController = TextEditingController();
   TextEditingController hoursController = TextEditingController();
@@ -125,13 +125,13 @@ class AddTimerPageState extends State<AddTimerPage> {
                         ),
                         const SizedBox(height: 8),
                         ElevatedButton(
-                          onPressed: () => setState(() => selectedPlayer = 'Cesar'),
+                          onPressed: () => setState(() => selectedPlayer = 'Joe'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: selectedPlayer == 'Cesar' ? Colors.green : Colors.grey[300],
-                            foregroundColor: selectedPlayer == 'Cesar' ? Colors.white : Colors.black,
+                            backgroundColor: selectedPlayer == 'Joe' ? Colors.green : Colors.grey[300],
+                            foregroundColor: selectedPlayer == 'Joe' ? Colors.white : Colors.black,
                             minimumSize: const Size(double.infinity, 40),
                           ),
-                          child: const Text('Cesar'),
+                          child: const Text('Joe'),
                         ),
                       ],
                     ),

@@ -1,10 +1,12 @@
+import 'package:clashofnotifications/models/boost_model.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:clashofnotifications/pages/add_timer_page.dart';
+import 'package:clashofnotifications/pages/timer_page.dart';
 import 'package:clashofnotifications/models/timer_model.dart';
 import 'package:clashofnotifications/helpers/database_helper.dart';
+import 'package:clashofnotifications/pages/boost_page.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -21,11 +23,9 @@ void main() async {
   );
 
   await notificationsPlugin.initialize(initializationSettings);
-  
-  // Initialize timezone support
   tz.initializeTimeZones();
-  tz.setLocalLocation(tz.getLocation('Australia/Brisbane')); // Change this to your actual timezone
-  
+  tz.setLocalLocation(tz.getLocation('Australia/Brisbane'));
+
   runApp(const MyApp());
 }
 
@@ -37,7 +37,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: Colors.grey[900], // Set background to grey
+        scaffoldBackgroundColor: Colors.grey[900],
         textTheme: const TextTheme(
           bodyLarge: TextStyle(color: Colors.white),
           bodyMedium: TextStyle(color: Colors.white70),
@@ -69,7 +69,7 @@ class MyApp extends StatelessWidget {
             borderSide: const BorderSide(color: Colors.greenAccent, width: 2),
           ),
           hintStyle: const TextStyle(color: Colors.white),
-          labelStyle: const TextStyle(color: Colors.white), // Label text color
+          labelStyle: const TextStyle(color: Colors.white),
         ),
       ),
       home: const HomePage(),
@@ -85,11 +85,18 @@ class HomePage extends StatefulWidget {
 }
 
 class HomePageState extends State<HomePage> {
+  final List<String> villageTypes = ['Home Village', 'Builder Base'];
+  final List<String> players = ['The Wolf', 'Splyce', 'P.L.U.C.K.', 'Joe'];
+
   List<TimerModel> timers = [];
   late DatabaseHelper dbHelper;
   Timer? _timer;
-  FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
 
+  // State variables for the selected filters
+  List<String> selectedVillageTypes = [];
+  List<String> selectedPlayers = [];
+
+  // Method to request notification permission
   Future<void> _requestNotificationPermission() async {
     var status = await Permission.notification.status;
     if (!status.isGranted) {
@@ -97,45 +104,48 @@ class HomePageState extends State<HomePage> {
     }
   }
 
+  // Method to confirm the deletion of a timer
   Future<bool> _confirmDelete(BuildContext context, int timerId) async {
     return await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Delete Timer?"),
-          content: const Text("Are you sure you want to delete this timer?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                dbHelper.deleteTimer(timerId);
-                _loadTimers();
-                Navigator.of(context).pop(true);
-              },
-              child: const Text("Delete", style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    ) ?? false;
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text("Delete Timer?"),
+              content: const Text("Are you sure you want to delete this timer?"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    dbHelper.deleteTimer(timerId);
+                    _loadTimers(); // Reload timers after deletion
+                    Navigator.of(context).pop(true);
+                  },
+                  child: const Text("Delete", style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 
+  // Method to build each timer tile
   Widget _buildTimerTile(TimerModel timer, Duration timeRemaining) {
     return InkWell(
       onTap: () async {
         final updatedTimer = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => AddTimerPage(timer: timer),
+            builder: (context) => TimerPage(timer: timer),
           ),
         );
 
         if (updatedTimer != null) {
           await dbHelper.updateTimer(updatedTimer);
-          _loadTimers(); // Refresh UI after editing
+          _loadTimers(); // Reload timers after updating
         }
       },
       child: Container(
@@ -173,22 +183,30 @@ class HomePageState extends State<HomePage> {
     );
   }
 
-
   @override
   void initState() {
     super.initState();
     dbHelper = DatabaseHelper();
     _requestNotificationPermission();
-    _loadTimers();
+    _loadTimers(); // Initial load of timers
     _startTimer();
   }
 
+  // Method to load timers from the database
   Future<void> _loadTimers() async {
     final loadedTimers = await dbHelper.getTimers();
-    loadedTimers.sort((a, b) => a.expiry.compareTo(b.expiry));
-    
+
+    // Apply filtering based on selected filters
+    final filteredTimers = loadedTimers.where((timer) {
+      bool matchesVillageType = selectedVillageTypes.isEmpty || selectedVillageTypes.contains(timer.village);
+      bool matchesPlayer = selectedPlayers.isEmpty || selectedPlayers.contains(timer.player);
+      return matchesVillageType && matchesPlayer;
+    }).toList();
+
+    filteredTimers.sort((a, b) => a.expiry.compareTo(b.expiry)); // Sort timers by expiry
+
     setState(() {
-      timers = loadedTimers;
+      timers = filteredTimers;
     });
   }
 
@@ -208,7 +226,7 @@ class HomePageState extends State<HomePage> {
         dbHelper.updateTimer(timer);
       }
     }
-    _loadTimers();
+    _loadTimers(); // Reload timers after checking expiry
   }
 
   String _formatDuration(Duration duration) {
@@ -230,45 +248,105 @@ class HomePageState extends State<HomePage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Upgrade List"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () async {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AddTimerPage()),
+  // Show Village Type filter dialog
+  Future<void> _showVillageTypeDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Select Village Type"),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: villageTypes.map((villageType) {
+                  return CheckboxListTile(
+                    title: Text(villageType),
+                    value: selectedVillageTypes.contains(villageType),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected != null) {
+                          if (selected) {
+                            selectedVillageTypes.add(villageType);
+                          } else {
+                            selectedVillageTypes.remove(villageType);
+                          }
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
               );
             },
           ),
-        ],
-      ),
-      body: ListView.builder(
-        itemCount: timers.length,
-        itemBuilder: (context, index) {
-          final timer = timers[index];
-          final timeRemaining = timer.expiry.difference(DateTime.now());
-
-          return Dismissible(
-            key: Key(timer.id.toString()), // Unique key for each item
-            direction: DismissDirection.endToStart,
-            confirmDismiss: (direction) async {
-              return await _confirmDelete(context, timer.id!);
-            },
-            background: Container(
-              color: Colors.red,
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(left: 16),
-              child: const Icon(Icons.delete, color: Colors.white),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _loadTimers(); // Reload timers with applied filters
+                Navigator.pop(context);
+              },
+              child: const Text("Apply"),
             ),
-            child: _buildTimerTile(timer, timeRemaining),
-          );
-        },
-      ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog without applying filters
+              },
+              child: const Text("Cancel"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Show Player filter dialog
+  Future<void> _showPlayerDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Select Player"),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: players.map((player) {
+                  return CheckboxListTile(
+                    title: Text(player),
+                    value: selectedPlayers.contains(player),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected != null) {
+                          if (selected) {
+                            selectedPlayers.add(player);
+                          } else {
+                            selectedPlayers.remove(player);
+                          }
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _loadTimers(); // Reload timers with applied filters
+                Navigator.pop(context);
+              },
+              child: const Text("Apply"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog without applying filters
+              },
+              child: const Text("Cancel"),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -276,5 +354,92 @@ class HomePageState extends State<HomePage> {
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Upgrade List"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.flash_on),
+            onPressed: () async {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => BoostPage(timers: timers)),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () async {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TimerPage()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Filter buttons above the list
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    await _showVillageTypeDialog(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Village Type'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    await _showPlayerDialog(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Player'),
+                ),
+              ],
+            ),
+          ),
+          // List of timers
+          Expanded(
+            child: ListView.builder(
+              itemCount: timers.length,
+              itemBuilder: (context, index) {
+                final timer = timers[index];
+                final timeRemaining = timer.expiry.difference(DateTime.now());
+
+                return Dismissible(
+                  key: Key(timer.id.toString()),
+                  direction: DismissDirection.endToStart,
+                  confirmDismiss: (direction) async {
+                    return await _confirmDelete(context, timer.id!);
+                  },
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(left: 16),
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  child: _buildTimerTile(timer, timeRemaining),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

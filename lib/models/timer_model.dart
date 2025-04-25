@@ -36,4 +36,22 @@ class TimerModel {
       isFinished: map['isFinished'] == 1, // Convert int to bool
     );
   }
+
+  TimerModel copyWith({
+    int? id,
+    String? player,
+    String? village,
+    String? upgrade,
+    DateTime? expiry,
+    bool? isFinished,
+  }) {
+    return TimerModel(
+      id: id ?? this.id,
+      player: player ?? this.player,
+      village: village ?? this.village,
+      upgrade: upgrade ?? this.upgrade,
+      expiry: expiry ?? this.expiry,
+      isFinished: isFinished ?? this.isFinished,
+    );
+  }
 }
