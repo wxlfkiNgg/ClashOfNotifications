@@ -24,7 +24,7 @@ class TimerPageState extends State<TimerPage> {
   final FocusNode minutesFocusNode = FocusNode();
 
   String selectedPlayer = "";
-  String selectedVillage = "";
+  String selectedVillage = "Home Village";
   String selectedUpgrade = "";
   int selectedDays = 0;
   int selectedHours = 0;
@@ -43,6 +43,7 @@ class TimerPageState extends State<TimerPage> {
 
       // Convert expiry time to days, hours, and minutes
       final duration = widget.timer!.expiry.difference(DateTime.now());
+      
       selectedDays = duration.inDays;
       selectedHours = duration.inHours.remainder(24);
       selectedMinutes = duration.inMinutes.remainder(60);
@@ -54,12 +55,20 @@ class TimerPageState extends State<TimerPage> {
     }
   }
 
-  void _clearFields() {
+  void _clearFields(String fields) {
     setState(() {
-      upgradeController.clear();
-      daysController.clear();
-      hoursController.clear();
-      minutesController.clear();
+      if (fields.contains("upgrade")) {
+        upgradeController.clear();
+      }
+      if (fields.contains("days")) {
+        daysController.clear();
+      }
+      if (fields.contains("hours")) {
+        hoursController.clear();
+      }
+      if (fields.contains("minutes")) {
+        minutesController.clear();
+      }
     });
   }
 
@@ -70,9 +79,65 @@ class TimerPageState extends State<TimerPage> {
         title: const Text("Add Timer"),
         actions: [
           TextButton(
-            onPressed: _clearFields, // Calls the function to reset fields
+            onPressed: () async {
+              // 1. Fetch helpers for the selected village
+              final helpers = await dbHelper.getHelpersForVillage(selectedPlayer);
+
+              // 2. Show modal with helpers
+              await showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    backgroundColor: const Color(0xFF212121),
+                    title: const Text('Select Helper', style: TextStyle(color: Color(0xFFF5F5F5))),
+                    content: SizedBox(
+                      width: double.maxFinite,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: helpers.length,
+                        itemBuilder: (context, index) {
+                          final helper = helpers[index];
+                          return ListTile(
+                            title: Text('${helper.player} (${helper.type})', style: const TextStyle(color: Color(0xFFF5F5F5))),
+                            subtitle: Text('Amount: ${helper.amount}', style: const TextStyle(color: Color(0xFFBDBDBD))),
+                            onTap: () async {
+                              // 2. Speed up timer by helper.amount for next 1 hour
+                              final now = DateTime.now();
+                              final expiry = widget.timer!.expiry;
+                              final newExpiry = expiry.subtract(Duration(hours: helper.amount));
+                              // Optionally: Store a timestamp to prevent repeated use within 1 hour
+
+                              // Update timer in DB
+                              await dbHelper.updateTimer(
+                                widget.timer!.copyWith(expiry: newExpiry),
+                              );
+
+                              // 3. Check for "Helpers Ready" timer
+                              final helpersReadyTimer = await dbHelper.getHelpersReadyTimer(selectedVillage);
+                              if (helpersReadyTimer != null && helpersReadyTimer.expiry.isBefore(now)) {
+                                // Reset to 23 hours
+                                await dbHelper.updateTimer(
+                                  helpersReadyTimer.copyWith(expiry: now.add(const Duration(hours: 23))),
+                                );
+                              }
+
+                              Navigator.of(context).pop(); // Close modal JS
+                              
+                              // Return to previous screen with new timer
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                              }
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
             child: const Text(
-              "Clear",
+              "Set Helper Timer",
               style: TextStyle(color: Colors.greenAccent, fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
@@ -136,37 +201,6 @@ class TimerPageState extends State<TimerPage> {
                       ],
                     ),
 
-                    // Spacing between the two sections
-                    const SizedBox(height: 20),
-
-                    // Second Category Group
-                    const Text("Village:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Column(
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => setState(() => selectedVillage = 'Home Village'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: selectedVillage == 'Home Village' ? Colors.green : Colors.grey[300],
-                            foregroundColor: selectedVillage == 'Home Village' ? Colors.white : Colors.black,
-                            minimumSize: const Size(double.infinity, 40),
-                          ),
-                          child: const Text('Home Village'),
-                        ),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: () => setState(() => selectedVillage = 'Builder Base'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: selectedVillage == 'Builder Base' ? Colors.green : Colors.grey[300],
-                            foregroundColor: selectedVillage == 'Builder Base' ? Colors.white : Colors.black,
-                            minimumSize: const Size(double.infinity, 40),
-                          ),
-                          child: const Text('Builder Base'),
-                        ),
-                      ],
-                    ),
-
-                    
                     const SizedBox(height: 20),
 
                     // Timer Input Section
@@ -215,6 +249,18 @@ class TimerPageState extends State<TimerPage> {
                             },
                           ),
                         ),
+                        const SizedBox(width: 10),
+
+                        SizedBox(
+                          width: 40, // Adjust width as needed
+                          child: IconButton(
+                            icon: const Icon(Icons.clear, color: Colors.red),
+                            tooltip: 'Clear timers',
+                            onPressed: () => _clearFields("days,hours,minutes"),
+                            padding: EdgeInsets.zero, // Removes extra padding
+                            constraints: const BoxConstraints(), // Removes extra constraints
+                          ),
+                        ),
                       ],
                     ),
 
@@ -222,15 +268,32 @@ class TimerPageState extends State<TimerPage> {
 
                     const Text("Upgrade:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    TextField(
-                      textCapitalization: TextCapitalization.words,
-                      controller: upgradeController,
-                      focusNode: upgradeFocusNode,
-                      maxLines: 1, // Allows multi-line input
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(), // Adds a border around the field
-                        hintText: "",
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            textCapitalization: TextCapitalization.words,
+                            controller: upgradeController,
+                            focusNode: upgradeFocusNode,
+                            maxLines: 1,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(),
+                              hintText: "",
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          width: 40,
+                          child: IconButton(
+                            icon: const Icon(Icons.clear, color: Colors.red),
+                            tooltip: 'Clear upgrade',
+                            onPressed: () => _clearFields("upgrade"),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

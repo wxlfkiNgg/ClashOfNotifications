@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:clashofnotifications/models/timer_model.dart';
 import 'package:clashofnotifications/models/boost_model.dart';
 import 'package:clashofnotifications/helpers/database_helper.dart';
+import 'package:intl/intl.dart'; // Importing intl package for DateFormat
 
 class BoostPage extends StatefulWidget {
   final List<TimerModel> timers;
@@ -13,7 +14,6 @@ class BoostPage extends StatefulWidget {
 }
 
 class _BoostPageState extends State<BoostPage> {
-  final TextEditingController _boostAmountController = TextEditingController();
   final TextEditingController _boostDurationController = TextEditingController();
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final Set<int> _selectedTimerIds = {};
@@ -24,11 +24,12 @@ class _BoostPageState extends State<BoostPage> {
   String? _selectedVillageType;
   String? _selectedPlayer;
 
+  int _selectedBoostAmount = 10; // Default to x10
+
   @override
   void initState() {
     super.initState();
     _loadTimers();
-    _boostAmountController.addListener(_onBoostValueChanged);
     _boostDurationController.addListener(_onBoostValueChanged);
   }
 
@@ -63,12 +64,11 @@ class _BoostPageState extends State<BoostPage> {
   }
 
   void _submitBoost() async {
-    final double? amount = double.tryParse(_boostAmountController.text);
     final int? durationMinutes = int.tryParse(_boostDurationController.text);
 
-    if (amount == null || durationMinutes == null || amount <= 1 || durationMinutes <= 0) {
+    if (durationMinutes == null || durationMinutes <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Enter valid boost amount (>1) and duration")),
+        const SnackBar(content: Text("Enter valid boost duration")),
       );
       return;
     }
@@ -82,7 +82,7 @@ class _BoostPageState extends State<BoostPage> {
     }
 
     final boost = BoostModel(
-      amount: amount,
+      amount: _selectedBoostAmount.toDouble(),
       duration: Duration(minutes: durationMinutes),
       startTime: DateTime.now(),
       affectedTimerIds: selectedTimerIds,
@@ -113,18 +113,13 @@ class _BoostPageState extends State<BoostPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(timer.player, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text("${timer.player} - ${timer.upgrade}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   Text(
-                    "${timer.village} - ${timer.upgrade}",
+                    "Original: ${_formatDuration(originalTimeRemaining)}",
                     style: TextStyle(color: Colors.grey.shade600),
                   ),
                   Row(
                     children: [
-                      Text(
-                        "Original: ${_formatDuration(originalTimeRemaining)}",
-                        style: const TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
-                      const SizedBox(width: 8),
                       Text(
                         "Boosted: ${_formatDuration(adjustedTimeRemaining)}",
                         style: TextStyle(
@@ -161,12 +156,61 @@ class _BoostPageState extends State<BoostPage> {
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
-            TextFormField(
-              controller: _boostAmountController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: "Boost Amount",
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _selectedBoostAmount == 2 ? Colors.green : Colors.grey[800],
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _selectedBoostAmount = 2;
+                    });
+                  },
+                  child: const Text('x2'),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _selectedBoostAmount == 4 ? Colors.green : Colors.grey[800],
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _selectedBoostAmount = 4;
+                    });
+                  },
+                  child: const Text('x4'),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _selectedBoostAmount == 10 ? Colors.green : Colors.grey[800],
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _selectedBoostAmount = 10;
+                    });
+                  },
+                  child: const Text('x10'),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _selectedBoostAmount == 24 ? Colors.green : Colors.grey[800],
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _selectedBoostAmount = 24;
+                    });
+                  },
+                  child: const Text('x24'),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             TextFormField(
@@ -180,36 +224,7 @@ class _BoostPageState extends State<BoostPage> {
             const Text("Select timers to apply boost to:"),
             const SizedBox(height: 10),Row(
               children: [
-                // First DropdownButton for Village Type
-                Expanded(
-                  child: DropdownButton<String>(
-                    value: _selectedVillageType,
-                    hint: const Text(
-                      "Village Type",
-                      style: TextStyle(color: Colors.white),  // White font color for hint text
-                    ),
-                    isExpanded: true,  // Ensures it takes up the full width
-                    style: const TextStyle(color: Colors.white),  // White font color for the selected value
-                    dropdownColor: Colors.black,  // Optional: change dropdown background color
-                    items: ["Home Village", "Builder Base"]
-                        .map((villageType) => DropdownMenuItem<String>(
-                              value: villageType,
-                              child: Text(
-                                villageType,
-                                style: const TextStyle(color: Colors.white),  // White font color for dropdown items
-                              ),
-                            ))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedVillageType = value;
-                      });
-                      _filterTimers();
-                    },
-                  ),
-                ),
-                const SizedBox(width: 10),
-                // Second DropdownButton for Player
+                // DropdownButton for Player
                 Expanded(
                   child: DropdownButton<String>(
                     value: _selectedPlayer,
@@ -248,7 +263,7 @@ class _BoostPageState extends State<BoostPage> {
                   final now = DateTime.now();
                   final originalTimeRemaining = timer.expiry.difference(now);
 
-                  final amount = double.tryParse(_boostAmountController.text) ?? 1;
+                  final amount = _selectedBoostAmount.toDouble();
                   final boostDuration = Duration(minutes: int.tryParse(_boostDurationController.text) ?? 0);
 
                   Duration adjustedTimeRemaining = originalTimeRemaining;
@@ -303,14 +318,30 @@ class _BoostPageState extends State<BoostPage> {
   }
 
   String _formatDuration(Duration duration) {
-    if (duration.isNegative || duration == Duration.zero) return "Done!";
-
     int days = duration.inDays;
     int hours = duration.inHours.remainder(24);
     int minutes = duration.inMinutes.remainder(60);
+    int seconds = duration.inSeconds.remainder(60);
 
-    if (days > 0) return "${days}d ${hours}h ${minutes}m";
-    if (hours > 0) return "${hours}h ${minutes}m";
-    return "${minutes}m";
+    if (duration.isNegative || duration == Duration.zero) {
+      return "Done!";
+    } else {
+      final DateTime now = DateTime.now();
+        final DateTime expiryDate = now.add(duration);
+        final timeFormat = DateFormat('h:mm a'); // 12-hour format with AM/PM
+
+        final DateTime todayDate = DateTime(now.year, now.month, now.day);
+        final DateTime tomorrowDate = todayDate.add(const Duration(days: 1));
+        final DateTime expiryDateOnly = DateTime(expiryDate.year, expiryDate.month, expiryDate.day);
+
+        if (expiryDateOnly == todayDate) {
+          return timeFormat.format(expiryDate);
+        } else if (expiryDateOnly == tomorrowDate) {
+          return "Tomozzles - ${timeFormat.format(expiryDate)}";
+        } else {
+          final dateFormat = DateFormat('E, d MMM');
+          return "${dateFormat.format(expiryDate)} ${timeFormat.format(expiryDate)}";
+        }
+    }
   }
 }

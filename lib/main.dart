@@ -1,4 +1,4 @@
-import 'package:clashofnotifications/models/boost_model.dart';
+import 'package:clashofnotifications/pages/helpers_page.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -7,7 +7,6 @@ import 'package:clashofnotifications/pages/timer_page.dart';
 import 'package:clashofnotifications/models/timer_model.dart';
 import 'package:clashofnotifications/helpers/database_helper.dart';
 import 'package:clashofnotifications/pages/boost_page.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/intl.dart';
@@ -177,7 +176,14 @@ class HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(timer.player, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                Text("${timer.village} - ${timer.upgrade}", style: TextStyle(color: Color.fromARGB(255, 173, 173, 173))),
+                Text(
+                  timer.upgrade,
+                  style: TextStyle(
+                    color: timer.upgrade == "Helpers Ready"
+                        ? Colors.orange
+                        : const Color.fromARGB(255, 173, 173, 173), // Otherwise, grey
+                  ),
+                ),
               ],
             ),
           ),
@@ -278,7 +284,7 @@ class HomePageState extends State<HomePage> {
         if (expiryDateOnly == todayDate) {
           return timeFormat.format(expiryDate);
         } else if (expiryDateOnly == tomorrowDate) {
-          return "Tomorrow - ${timeFormat.format(expiryDate)}";
+          return "Tomozzles - ${timeFormat.format(expiryDate)}";
         } else {
           final dateFormat = DateFormat('E, d MMM');
           return "${dateFormat.format(expiryDate)} ${timeFormat.format(expiryDate)}";
@@ -288,57 +294,6 @@ class HomePageState extends State<HomePage> {
         return "";
       }
     }
-  }
-
-  // Show Village Type filter dialog
-  Future<void> _showVillageTypeDialog(BuildContext context) async {
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Select Village Type"),
-          content: StatefulBuilder(
-            builder: (BuildContext context, StateSetter setState) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: villageTypes.map((villageType) {
-                  return CheckboxListTile(
-                    title: Text(villageType),
-                    value: selectedVillageTypes.contains(villageType),
-                    onChanged: (bool? selected) {
-                      setState(() {
-                        if (selected != null) {
-                          if (selected) {
-                            selectedVillageTypes.add(villageType);
-                          } else {
-                            selectedVillageTypes.remove(villageType);
-                          }
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
-              );
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                _loadTimers(); // Reload timers with applied filters
-                Navigator.pop(context);
-              },
-              child: const Text("Apply"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close the dialog without applying filters
-              },
-              child: const Text("Cancel"),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   // Show Player filter dialog
@@ -414,24 +369,9 @@ class HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.timer),
             onPressed: () async {
-              if (displayMode == "Timer") {
-                setState(() {
-                  displayMode = "Date";
-                });
-              } else {
-                setState(() {
-                  displayMode = "Timer";
-                });
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.flash_on),
-            onPressed: () async {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => BoostPage(timers: timers)),
-              );
+              setState(() {
+                displayMode = displayMode == "Timer" ? "Date" : "Timer";
+              });
             },
           ),
           IconButton(
@@ -445,6 +385,53 @@ class HomePageState extends State<HomePage> {
           ),
         ],
       ),
+      drawer: Drawer(
+        child: Container(
+          color: Colors.grey[900], // Match your app's dark background
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Colors.grey[850],
+                ),
+                margin: EdgeInsets.zero, // Removes the default bottom margin
+                child: const Text(
+                  'Pages',
+                  style: TextStyle(
+                    color: Colors.greenAccent,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.flash_on, color: Colors.greenAccent),
+                title: const Text('Boosts', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => BoostPage(timers: timers)),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.assured_workload, color: Colors.greenAccent),
+                title: const Text('Helpers', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => HelpersPage()),
+                  );
+                },
+              ),
+              // Add more ListTiles here for future pages
+            ],
+          ),
+        ),
+      ),
       body: Column(
         children: [
           // Filter buttons above the list
@@ -453,16 +440,6 @@ class HomePageState extends State<HomePage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                ElevatedButton(
-                  onPressed: () async {
-                    await _showPlayerDialog(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Player'),
-                ),
                 ElevatedButton(
                   onPressed: () async {
                     await _resetFilters(context);
@@ -475,13 +452,13 @@ class HomePageState extends State<HomePage> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    await _showVillageTypeDialog(context);
+                    await _showPlayerDialog(context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Village Type'),
+                  child: const Text('Player'),
                 ),
               ],
             ),
