@@ -290,10 +290,11 @@ class _BoostPageState extends State<BoostPage> {
                 },
               ),
             ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: _submitBoost,
-              child: const Text("Apply Boost"),
+            SafeArea(
+              child: ElevatedButton(
+                onPressed: _submitBoost,
+                child: const Text("Apply Boost"),
+              ),
             ),
           ],
         ),

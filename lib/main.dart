@@ -7,8 +7,10 @@ import 'package:clashofnotifications/pages/timer_page.dart';
 import 'package:clashofnotifications/models/timer_model.dart';
 import 'package:clashofnotifications/helpers/database_helper.dart';
 import 'package:clashofnotifications/pages/boost_page.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:intl/intl.dart';
 
 final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
 
@@ -91,6 +93,7 @@ class HomePageState extends State<HomePage> {
   List<TimerModel> timers = [];
   late DatabaseHelper dbHelper;
   Timer? _timer;
+  String displayMode = 'Timer';
 
   // State variables for the selected filters
   List<String> selectedVillageTypes = [];
@@ -134,54 +137,68 @@ class HomePageState extends State<HomePage> {
 
   // Method to build each timer tile
   Widget _buildTimerTile(TimerModel timer, Duration timeRemaining) {
-    return InkWell(
-      onTap: () async {
-        final updatedTimer = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TimerPage(timer: timer),
-          ),
-        );
-
-        if (updatedTimer != null) {
-          await dbHelper.updateTimer(updatedTimer);
-          _loadTimers(); // Reload timers after updating
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(timer.player, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text("${timer.village} - ${timer.upgrade}", style: TextStyle(color: const Color.fromARGB(255, 173, 173, 173))),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.green,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              height: 40,
-              child: Text(
-                _formatDuration(timeRemaining),
-                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  // Determine the color based on time remaining
+  Color timeColor;
+  if (timer.player == "The Wolf") {
+    timeColor = Colors.green;
+  } else if (timer.player == "Splyce") {
+    timeColor = Colors.blue;
+  } else if (timer.player == "P.L.U.C.K.") {
+    timeColor = Colors.orange;
+  } else if (timer.player == "Joe") {
+    timeColor = Colors.red;
+  } else {
+    timeColor = Colors.grey; // Default color for other players
   }
+
+  return InkWell(
+    onTap: () async {
+      final updatedTimer = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TimerPage(timer: timer),
+        ),
+      );
+
+      if (updatedTimer != null) {
+        await dbHelper.updateTimer(updatedTimer);
+        _loadTimers(); // Reload timers after updating
+      }
+    },
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(timer.player, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text("${timer.village} - ${timer.upgrade}", style: TextStyle(color: Color.fromARGB(255, 173, 173, 173))),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: timeColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            alignment: Alignment.center,
+            height: 40,
+            child: Text(
+              _formatDuration(timeRemaining),
+              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
   @override
   void initState() {
@@ -237,14 +254,39 @@ class HomePageState extends State<HomePage> {
 
     if (duration.isNegative || duration == Duration.zero) {
       return "Done!";
-    } else if (days == 0) {
-      if (hours == 0) {
-        return "${minutes}m ${seconds}s";
-      } else {
-        return "${hours}h ${minutes}m";
-      }
     } else {
-      return "${days}d ${hours}h ${minutes}m";
+      if (displayMode == "Timer") {
+        if (days == 0) {
+          if (hours == 0) {
+            return "${minutes}m ${seconds}s";
+          } else {
+            return "${hours}h ${minutes}m";
+          }
+        } else {
+          return "${days}d ${hours}h ${minutes}m";
+        }
+      } 
+      else if (displayMode == "Date") {
+        final DateTime now = DateTime.now();
+        final DateTime expiryDate = now.add(duration);
+        final timeFormat = DateFormat('h:mm a'); // 12-hour format with AM/PM
+
+        final DateTime todayDate = DateTime(now.year, now.month, now.day);
+        final DateTime tomorrowDate = todayDate.add(const Duration(days: 1));
+        final DateTime expiryDateOnly = DateTime(expiryDate.year, expiryDate.month, expiryDate.day);
+
+        if (expiryDateOnly == todayDate) {
+          return timeFormat.format(expiryDate);
+        } else if (expiryDateOnly == tomorrowDate) {
+          return "Tomorrow - ${timeFormat.format(expiryDate)}";
+        } else {
+          final dateFormat = DateFormat('E, d MMM');
+          return "${dateFormat.format(expiryDate)} ${timeFormat.format(expiryDate)}";
+        }
+      } 
+      else {
+        return "";
+      }
     }
   }
 
@@ -350,6 +392,13 @@ class HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _resetFilters(BuildContext context) async {
+    setState(() {
+      selectedVillageTypes.clear();
+      selectedPlayers.clear();
+    });
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -362,6 +411,20 @@ class HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text("Upgrade List"),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.timer),
+            onPressed: () async {
+              if (displayMode == "Timer") {
+                setState(() {
+                  displayMode = "Date";
+                });
+              } else {
+                setState(() {
+                  displayMode = "Timer";
+                });
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.flash_on),
             onPressed: () async {
@@ -392,16 +455,6 @@ class HomePageState extends State<HomePage> {
               children: [
                 ElevatedButton(
                   onPressed: () async {
-                    await _showVillageTypeDialog(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Village Type'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
                     await _showPlayerDialog(context);
                   },
                   style: ElevatedButton.styleFrom(
@@ -409,6 +462,26 @@ class HomePageState extends State<HomePage> {
                     foregroundColor: Colors.white,
                   ),
                   child: const Text('Player'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    await _resetFilters(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey,
+                    foregroundColor: Colors.black,
+                  ),
+                  child: const Text('Reset Filters'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    await _showVillageTypeDialog(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Village Type'),
                 ),
               ],
             ),
