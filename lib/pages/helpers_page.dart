@@ -12,11 +12,16 @@ class HelpersPage extends StatefulWidget {
 class _HelpersPageState extends State<HelpersPage> {
   late DatabaseHelper dbHelper;
   List<HelperModel> helpers = [];
-  final List<String> players = ["The Wolf", "Splyce", "Other"]; // Example player list
+  final List<String> players = ["The Wolf", "Splyce", "P.L.U.C.K."]; // Example player list
 
   Future<void> _loadHelpers() async {
     // Replace with your actual database logic
     helpers = await dbHelper.getHelpers();
+    helpers.sort((a, b) {
+      final playerCompare = b.player.compareTo(a.player);
+      if (playerCompare != 0) return playerCompare;
+      return a.type.compareTo(b.type);
+    });
     setState(() {});
   }
 
