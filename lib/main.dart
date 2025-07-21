@@ -112,12 +112,19 @@ class HomePageState extends State<HomePage> {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: const Text("Delete Timer?"),
-              content: const Text("Are you sure you want to delete this timer?"),
+              backgroundColor: const Color(0xFF212121), // Dark grey
+              title: const Text(
+                "Delete Timer?",
+                style: TextStyle(color: Color(0xFFF5F5F5)), // White
+              ),
+              content: const Text(
+                "Are you sure you want to delete this timer?",
+                style: TextStyle(color: Color(0xFFF5F5F5)), // White
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text("Cancel"),
+                  child: const Text("Cancel", style: TextStyle(color: Color(0xFFBDBDBD))), // Medium grey
                 ),
                 TextButton(
                   onPressed: () {

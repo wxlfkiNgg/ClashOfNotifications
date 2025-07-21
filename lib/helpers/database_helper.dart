@@ -173,10 +173,17 @@ class DatabaseHelper {
   }
 
   Future<void> _scheduleNotification(TimerModel timer) async {
+    String upgradeMessage;
+    if (timer.upgrade == 'Helpers Ready') {
+      upgradeMessage = 'Helpers are ready!';
+    } else {
+      upgradeMessage = '${timer.upgrade} has finished upgrading.';
+    }
+
     await notificationsPlugin.zonedSchedule(
       timer.id!,
-      "${timer.player} - ${timer.village}",
-      "${timer.upgrade} has finished upgrading.",
+      timer.player,
+      upgradeMessage,
       tz.TZDateTime.from(timer.expiry, tz.local),
       const NotificationDetails(
         android: AndroidNotificationDetails(
@@ -205,13 +212,12 @@ class DatabaseHelper {
     return result.map((json) => HelperModel.fromMap(json)).toList();
   }
 
-  // Get the "Helpers Ready" timer for a village
-  Future<TimerModel?> getHelpersReadyTimer(String village) async {
+  Future<TimerModel?> getHelpersReadyTimer(String player) async {
     final db = await database;
     final result = await db.query(
       'timers',
-      where: 'village = ? AND upgrade = ?',
-      whereArgs: [village, 'Helpers Ready'],
+      where: 'player = ? AND upgrade = ?',
+      whereArgs: [player, 'Helpers Ready'],
       limit: 1,
     );
     if (result.isNotEmpty) {

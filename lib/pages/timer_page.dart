@@ -112,18 +112,16 @@ class TimerPageState extends State<TimerPage> {
                                 widget.timer!.copyWith(expiry: newExpiry),
                               );
 
-                              // 3. Check for "Helpers Ready" timer
-                              final helpersReadyTimer = await dbHelper.getHelpersReadyTimer(selectedVillage);
-                              if (helpersReadyTimer != null && helpersReadyTimer.expiry.isBefore(now)) {
+                              final helpersReadyTimer = await dbHelper.getHelpersReadyTimer(selectedPlayer);
+                              if (helpersReadyTimer != null && helpersReadyTimer.isFinished) {
                                 // Reset to 23 hours
                                 await dbHelper.updateTimer(
                                   helpersReadyTimer.copyWith(expiry: now.add(const Duration(hours: 23))),
                                 );
                               }
 
-                              Navigator.of(context).pop(); // Close modal JS
+                              Navigator.of(context).pop();
                               
-                              // Return to previous screen with new timer
                               if (context.mounted) {
                                 Navigator.pop(context);
                               }
