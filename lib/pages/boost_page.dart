@@ -235,7 +235,7 @@ class _BoostPageState extends State<BoostPage> {
                     isExpanded: true,  // Ensures it takes up the full width
                     style: const TextStyle(color: Colors.white),  // White font color for the selected value
                     dropdownColor: Colors.black,  // Optional: change dropdown background color
-                    items: ["The Wolf", "Splyce", "P.L.U.C.K.", "Joe"]
+                    items: ["The Wolf", "Splyce", "P.L.U.C.K."]
                         .map((player) => DropdownMenuItem<String>(
                               value: player,
                               child: Text(

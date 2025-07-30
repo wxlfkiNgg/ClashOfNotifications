@@ -186,16 +186,6 @@ class TimerPageState extends State<TimerPage> {
                           ),
                           child: const Text('P.L.U.C.K.'),
                         ),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: () => setState(() => selectedPlayer = 'Joe'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: selectedPlayer == 'Joe' ? Colors.green : Colors.grey[300],
-                            foregroundColor: selectedPlayer == 'Joe' ? Colors.white : Colors.black,
-                            minimumSize: const Size(double.infinity, 40),
-                          ),
-                          child: const Text('Joe'),
-                        ),
                       ],
                     ),
 

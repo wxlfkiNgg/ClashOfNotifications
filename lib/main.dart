@@ -87,7 +87,7 @@ class HomePage extends StatefulWidget {
 
 class HomePageState extends State<HomePage> {
   final List<String> villageTypes = ['Home Village', 'Builder Base'];
-  final List<String> players = ['The Wolf', 'Splyce', 'P.L.U.C.K.', 'Joe'];
+  final List<String> players = ['The Wolf', 'Splyce', 'P.L.U.C.K.'];
 
   List<TimerModel> timers = [];
   late DatabaseHelper dbHelper;
@@ -151,8 +151,6 @@ class HomePageState extends State<HomePage> {
     timeColor = Colors.blue;
   } else if (timer.player == "P.L.U.C.K.") {
     timeColor = Colors.orange;
-  } else if (timer.player == "Joe") {
-    timeColor = Colors.red;
   } else {
     timeColor = Colors.grey; // Default color for other players
   }
