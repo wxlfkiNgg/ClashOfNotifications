@@ -100,6 +100,9 @@ class DatabaseHelper {
       await notificationsPlugin.cancel(timer.id!);
       await _scheduleNotification(timer);
     }
+    else if (timer.upgrade == 'Helpers Ready') {
+      await _scheduleNotification(timer);
+    }
   }
   
   Future<void> insertHelper(HelperModel helper) async {
