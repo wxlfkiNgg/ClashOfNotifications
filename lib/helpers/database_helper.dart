@@ -135,6 +135,18 @@ class DatabaseHelper {
     }
   }
   
+  Future<void> updateTimerUpgradeName(int timerId, String newName) async {
+    final db = await database;
+    await db.update(
+      'timers',
+      {
+        'upgrade': newName,
+      },
+      where: 'id = ?',
+      whereArgs: [timerId],
+    );
+  }
+  
   Future<void> insertHelper(HelperModel helper) async {
     final db = await database;
     helper.id = await db.insert('helpers', helper.toMap(),

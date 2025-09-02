@@ -113,7 +113,50 @@ class HomePageState extends State<HomePage> {
     return data?.text;
   }
 
-  // Method to confirm the deletion of a timer
+  Future<void> _updateUpgradeNameOnly(BuildContext context, int timerId, String oldUpgradeName) async {
+    final TextEditingController controller = TextEditingController();
+    controller.text = oldUpgradeName;
+
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF212121),
+          title: const Text(
+            "Update Upgrade Name",
+            style: TextStyle(color: Color(0xFFF5F5F5)),
+            ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: "Enter new name",
+            ),
+            
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // close dialog without saving
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final newName = controller.text.trim();
+                if (newName.isNotEmpty) {
+                  dbHelper.updateTimerUpgradeName(timerId, newName);
+                }
+                Navigator.of(context).pop(); // close dialog after saving
+              },
+              child: const Text("Submit"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<bool> _confirmDelete(BuildContext context, int timerId) async {
     return await showDialog(
           context: context,
@@ -172,7 +215,7 @@ class HomePageState extends State<HomePage> {
                 Navigator.of(context).pop(true);
                 _uploadFromClipboard();
               },
-              child: const Text("Upload", style: TextStyle(color: Colors.red)),
+              child: const Text("Upload", style: TextStyle(color: Colors.green)),
             ),
           ],
         );
@@ -201,7 +244,8 @@ class HomePageState extends State<HomePage> {
 
       for (final t in timers) {
         //print("⏳ ${t['name']} (lvl ${t['level']}) is upgrading, ${t['remaining']}s left");
-        final expiryTime = DateTime.now().add(Duration(seconds: t['remaining']));
+        Duration duration = Duration(seconds: t['remaining'] - 3); //3 second buffer to account for export/import time difference
+        final expiryTime = DateTime.now().add(duration);
 
         final newTimer = TimerModel(
           player: player,
@@ -458,7 +502,7 @@ class HomePageState extends State<HomePage> {
         if (expiryDateOnly == todayDate) {
           return timeFormat.format(expiryDate);
         } else if (expiryDateOnly == tomorrowDate) {
-          return "Tomozzles - ${timeFormat.format(expiryDate)}";
+          return "Tomorrow - ${timeFormat.format(expiryDate)}";
         } else {
           final dateFormat = DateFormat('E, d MMM');
           return "${dateFormat.format(expiryDate)} ${timeFormat.format(expiryDate)}";
@@ -665,11 +709,16 @@ class HomePageState extends State<HomePage> {
                     padding: const EdgeInsets.only(left: 16),
                     child: const Icon(Icons.delete, color: Colors.white),
                   ),
-                  child: _buildTimerTile(timer, timeRemaining),
+                  child: GestureDetector(
+                    onLongPress: () async {
+                      return await _updateUpgradeNameOnly(context, timer.id!, timer.upgrade);
+                    },
+                    child: _buildTimerTile(timer, timeRemaining),
+                  ),
                 );
               },
             ),
-          ),
+          )
         ],
       ),
     );
