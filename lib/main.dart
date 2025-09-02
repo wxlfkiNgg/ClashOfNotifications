@@ -10,6 +10,8 @@ import 'package:clashofnotifications/pages/boost_page.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/intl.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart';
 
 final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
 
@@ -105,6 +107,11 @@ class HomePageState extends State<HomePage> {
       await Permission.notification.request();
     }
   }
+  
+  Future<String?> _getClipboardData() async {
+    final data = await Clipboard.getData('text/plain');
+    return data?.text;
+  }
 
   // Method to confirm the deletion of a timer
   Future<bool> _confirmDelete(BuildContext context, int timerId) async {
@@ -139,6 +146,168 @@ class HomePageState extends State<HomePage> {
           },
         ) ??
         false;
+  }
+
+  Future<bool> _confirmUploadFromClipboard(BuildContext context) async {
+    return await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF212121),
+          title: const Text(
+            "Upload From Clipboard?",
+            style: TextStyle(color: Color(0xFFF5F5F5)),
+          ),
+          content: const Text(
+            "Are you sure you want to upload data from the clipboard? Existing timers for the relevant village will be deleted and replaced.",
+            style: TextStyle(color: Color(0xFFF5F5F5)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text("Cancel", style: TextStyle(color: Color(0xFFBDBDBD))),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop(true);
+                _uploadFromClipboard();
+              },
+              child: const Text("Upload", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    ) ??
+    false;
+  }
+
+  void _uploadFromClipboard() async {
+    final clipboardText = await _getClipboardData();
+
+    if (clipboardText == null || clipboardText.isEmpty) return;
+
+    final isValid = await _validateClipboardData(clipboardText);
+
+    if (isValid) {
+      final Map<String, dynamic> village = jsonDecode(clipboardText);
+
+      final String player = _getPlayerNameFromTag(village['tag']);
+      await dbHelper.deleteTimersForPlayer(player, "Helpers Ready");
+
+      // Load building/unit/hero mappings (can cache these instead of reloading each time)
+      final objectMap = await _loadMapping("objects.json");
+
+      final timers = await _extractUpgradingItems(village, objectMap);
+
+      for (final t in timers) {
+        //print("⏳ ${t['name']} (lvl ${t['level']}) is upgrading, ${t['remaining']}s left");
+        final expiryTime = DateTime.now().add(Duration(seconds: t['remaining']));
+
+        final newTimer = TimerModel(
+          player: player,
+          village: 'Home Village',
+          upgrade: t['name'],
+          expiry: expiryTime,
+          isFinished: false,
+        );
+
+        await dbHelper.insertTimer(newTimer);
+      }
+    }
+  }
+
+
+  String _getPlayerNameFromTag(String tag) {
+    if (tag == "#Q0YY0CR0") {
+      return "The Wolf";
+    } else if (tag == "#GRJLG0RR0") {
+      return "Splyce";
+    } else if (tag == "#GQUV2JRY2") {
+      return "P.L.U.C.K.";
+    } else {
+      return "Unknown: $tag";
+    }
+  }
+
+  Future<bool> _validateClipboardData(String clipboardData) async {
+    if (clipboardData.isEmpty) return false;
+
+    try {
+      final parsed = jsonDecode(clipboardData);
+
+      // Top-level must be a Map
+      if (parsed is! Map<String, dynamic>) return false;
+
+      // Required keys
+      final requiredKeys = ["tag", "timestamp", "buildings"];
+      for (var key in requiredKeys) {
+        if (!parsed.containsKey(key)) return false;
+      }
+
+      // Basic type checks
+      if (parsed["tag"] is! String) return false;
+      if (parsed["timestamp"] is! int) return false;
+      if (parsed["buildings"] is! List) return false;
+
+      // Quick validation of at least one building entry
+      if ((parsed["buildings"] as List).isNotEmpty) {
+        final firstBuilding = (parsed["buildings"] as List).first;
+        if (firstBuilding is! Map) return false;
+        if (!firstBuilding.containsKey("data") || !firstBuilding.containsKey("lvl")) {
+          return false;
+        }
+      }
+
+      return true;
+    } catch (e) {
+      // jsonDecode failed or validation failed
+      return false;
+    }
+  }
+
+  Future<Map<String, String>> _loadMapping(String filename) async {
+    final String jsonString = await rootBundle.loadString('assets/clashdata/$filename');
+    final Map<String, dynamic> jsonMap = jsonDecode(jsonString);
+    return jsonMap.map((key, value) => MapEntry(key, value.toString()));
+  }
+
+  Future<List<Map<String, dynamic>>> _extractUpgradingItems(
+    Map<String, dynamic> village,
+    Map<String, String> buildingMap,
+  ) async {
+    final List<Map<String, dynamic>> upgradingItems = [];
+
+    // List of all sections we care about
+    final sections = [
+      "buildings",
+      "heroes",
+      "pets",
+      "siege_machines",
+      "spells",
+      "traps",
+      "units",
+    ];
+
+    for (final section in sections) {
+      if (village.containsKey(section) && village[section] is List) {
+        for (final item in village[section]) {
+          if (item is Map && item.containsKey("timer")) {
+            final String id = item["data"].toString();
+            final String? name = buildingMap[id] ?? "unknown_$id";
+
+            upgradingItems.add({
+              "id": id,
+              "name": name,
+              "level": item["lvl"],
+              "remaining": item["timer"], // in seconds
+              "section": section,
+            });
+          }
+        }
+      }
+    }
+
+    return upgradingItems;
   }
 
   // Method to build each timer tile
@@ -371,6 +540,14 @@ class HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text("Upgrade List"),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.import_export),
+            onPressed: () async {
+              setState(() {
+                _confirmUploadFromClipboard(context);
+              });
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.timer),
             onPressed: () async {

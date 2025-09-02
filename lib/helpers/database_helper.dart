@@ -86,6 +86,36 @@ class DatabaseHelper {
     await notificationsPlugin.cancel(id);
   }
 
+  Future<void> deleteTimersForPlayer(String player, String? exception) async {
+    final db = await database;
+
+    final timers = List<Map<String, dynamic>>.from(
+      await db.query(
+        tableNameTimers,
+        where: 'player = ?',
+        whereArgs: [player],
+      ),
+    );
+
+    if (exception != null) {
+      timers.removeWhere((timer) => timer['upgrade'] == exception);
+    }
+
+    for (final timer in timers) {
+      final int? id = timer['id'] as int?;
+
+      if (id != null) {
+        await notificationsPlugin.cancel(id);
+
+        await db.delete(
+          tableNameTimers,
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      }
+    }
+  }
+
   Future<void> updateTimer(TimerModel timer) async {
     final db = await database;
     await db.update(
