@@ -29,6 +29,11 @@ void main() async {
   tz.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation('Australia/Brisbane'));
 
+  // Force Portrait Mode
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp, // Normal Portrait
+  ]);
+
   runApp(const MyApp());
 }
 
@@ -415,7 +420,7 @@ class HomePageState extends State<HomePage> {
             height: 40,
             child: Text(
               _formatDuration(timeRemaining),
-              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(color: _getBoostedTimeColor(timeRemaining), fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -423,6 +428,23 @@ class HomePageState extends State<HomePage> {
     ),
   );
 }
+
+Color _getBoostedTimeColor(Duration adjustedTimeRemaining) {
+    final targetTime = DateTime.now().add(adjustedTimeRemaining);
+
+    final hour = targetTime.hour;
+
+    // Determine the color based on the target hour
+    if (hour >= 23 || hour < 6) {
+      return Colors.red; // Between 11 PM and 6 AM
+    } else if (hour >= 6 && hour < 7) {
+      return Colors.orange; // Between 6 AM and 7 AM
+    } else if (hour >= 7 && hour < 8) {
+      return Colors.yellow; // Between 7 AM and 8 AM
+    } else {
+      return Colors.white; // Otherwise (anything else)
+    }
+  }
 
   @override
   void initState() {

@@ -38,8 +38,9 @@ class _BoostPageState extends State<BoostPage> {
     timers.sort((a, b) => a.expiry.compareTo(b.expiry));
     setState(() {
       _timers = timers;
-      _filteredTimers = List.from(_timers); // Initialize with all timers
+      _filteredTimers = List.from(_timers);
     });
+
   }
 
   void _onBoostValueChanged() {
@@ -47,7 +48,7 @@ class _BoostPageState extends State<BoostPage> {
   }
 
   Color _getBoostedTimeColor(Duration adjustedTimeRemaining) {
-    final targetTime = DateTime.now().add(adjustedTimeRemaining); // Calculate the target completion time
+    final targetTime = DateTime.now().add(adjustedTimeRemaining);
 
     final hour = targetTime.hour;
 

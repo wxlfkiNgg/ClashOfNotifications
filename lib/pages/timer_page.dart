@@ -114,10 +114,11 @@ class TimerPageState extends State<TimerPage> {
 
                               final helpersReadyTimer = await dbHelper.getHelpersReadyTimer(selectedPlayer);
                               if (helpersReadyTimer != null && helpersReadyTimer.isFinished) {
-                                // Reset to 23 hours
-                                await dbHelper.updateTimer(
-                                  helpersReadyTimer.copyWith(expiry: now.add(const Duration(hours: 23))),
-                                );
+                                // Reset to 23 hours + 5 mins
+                                if (helpersReadyTimer.isFinished) {
+                                  await dbHelper.updateTimer(
+                                    helpersReadyTimer.copyWith(expiry: now.add(const Duration(hours: 23, minutes: 5))),
+                                );}
                               }
 
                               Navigator.of(context).pop();
