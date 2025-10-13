@@ -12,116 +12,342 @@
   "90000010": "Giant Gauntlet",
   "90000011": "Vampstache",
   "90000012": "Healer Puppet",
-  "1000001": "Town Hall",
-  "1000008": "Cannon",
-  "1000009": "Archer Tower",
-  "1000084": "Multi-Archer Tower",
-  "1000085": "Ricochet Cannon",
-  "1000013": "Mortar",
-  "1000000": "Army Camp",
-  "1000002": "Elixir Collector",
-  "1000003": "Elixir Storage",
-  "1000004": "Gold Mine",
-  "1000005": "Gold Storage",
-  "1000006": "Barracks",
-  "1000007": "Laboratory",
-  "1000010": "Wall",
-  "1000011": "Wizard Tower",
-  "1000012": "Air Defense",
-  "1000014": "Clan Castle",
-  "1000015": "Builder Hut",
-  "1000019": "Hidden Tesla",
-  "1000020": "Spell Factory",
-  "1000021": "X-Bow",
-  "1000023": "Dark Elixir Drill",
-  "1000024": "Dark Elixir Storage",
-  "1000026": "Dark Barracks",
-  "1000027": "Inferno Tower",
-  "1000028": "Air Sweeper",
-  "1000029": "Dark Spell Factory",
-  "1000031": "Eagle Artillery",
-  "1000032": "Bomb Tower",
-  "1000059": "Workshop",
-  "1000067": "Scattershot",
-  "1000068": "Pet House",
-  "1000070": "Blacksmith",
-  "1000071": "Hero Hall",
-  "1000072": "Spell Tower",
-  "1000077": "Monolith",
-  "1000089": "Firespitter",
-  "1000093": "Helper Hut",
-  "28000000": "Barbarian King",
-  "28000001": "Archer Queen",
-  "28000002": "Grand Warden",
-  "28000004": "Royal Champion",
-  "28000006": "Minion Prince",
-  "28000003": "Battle Machine",
-  "28000005": "Battle Copter",
-  "73000016": "Sneezy",
-  "73000011": "Angry Jelly",
-  "73000010": "Spirit Fox",
-  "73000004": "Phoenix",
-  "73000007": "Poison Lizard",
-  "73000008": "Diggy",
-  "73000009": "Frosty",
-  "73000003": "Unicorn",
-  "73000001": "Mighty Yak",
-  "73000002": "Electro Owl",
-  "73000000": "L.A.S.S.I.",
-  "4000051": "Wall Wrecker",
-  "4000052": "Battle Blimp",
-  "4000062": "Stone Slammer",
-  "4000075": "Siege Barracks",
-  "4000087": "Log Launcher",
-  "4000091": "Flame Flinger",
-  "4000092": "Battle Drill",
-  "26000000": "Lightning Spell",
-  "26000001": "Healing Spell",
-  "26000002": "Rage Spell",
-  "26000003": "Jump Spell",
-  "26000005": "Freeze Spell",
-  "26000009": "Poison Spell",
-  "26000010": "Earthquake Spell",
-  "26000011": "Haste Spell",
-  "26000016": "Clone Spell",
-  "26000017": "Skeleton Spell",
-  "26000028": "Bat Spell",
-  "26000035": "Invisibility Spell",
-  "26000053": "Recall Spell",
-  "26000070": "Overgrowth Spell",
-  "12000000": "Bomb",
-  "12000001": "Spring Trap",
-  "12000002": "Giant Bomb",
-  "12000005": "Air Bomb",
-  "12000006": "Seeking Air Mine",
-  "12000008": "Skeleton Trap",
-  "12000016": "Tornado Trap",
-  "4000000": "Barbarian",
-  "4000001": "Archer",
-  "4000002": "Goblin",
-  "4000003": "Giant",
-  "4000004": "Wall Breaker",
-  "4000005": "Balloon",
-  "4000006": "Wizard",
-  "4000007": "Healer",
-  "4000008": "Dragon",
-  "4000009": "P.E.K.K.A",
-  "4000010": "Minion",
-  "4000011": "Hog Rider",
-  "4000012": "Valkyrie",
-  "4000013": "Golem",
-  "4000015": "Witch",
-  "4000017": "Lava Hound",
-  "4000022": "Bowler",
-  "4000023": "Baby Dragon",
-  "4000024": "Miner",
-  "4000053": "Yeti",
-  "4000058": "Ice Golem",
-  "4000059": "Electro Dragon",
-  "4000065": "Dragon Rider",
-  "4000082": "Head Hunter",
-  "4000095": "Electro Titan",
-  "4000097": "Apprentice Warden",
-  "4000110": "Root Rider",
-  "4000123": "Druid"
+  "1000000": [
+    { "name": "Army Camp", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000001": [
+    { "name": "Town Hall", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000002": [
+    { "name": "Elixir Collector", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000003": [
+    { "name": "Elixir Storage", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000004": [
+    { "name": "Gold Mine", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000005": [
+    { "name": "Gold Storage", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000006": [
+    { "name": "Barracks", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000007": [
+    { "name": "Laboratory", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000008": [
+    { "name": "Cannon", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000009": [
+    { "name": "Archer Tower", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000010": [
+    { "name": "Wall", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000011": [
+    { "name": "Wizard Tower", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000012": [
+    { "name": "Air Defense", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000013": [
+    { "name": "Mortar", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000014": [
+    { "name": "Clan Castle", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000015": [
+    { "name": "Builder Hut", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000019": [
+    { "name": "Hidden Tesla", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000020": [
+    { "name": "Spell Factory", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000021": [
+    { "name": "X-Bow", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000023": [
+    { "name": "Dark Elixir Drill", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000024": [
+    { "name": "Dark Elixir Storage", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000026": [
+    { "name": "Dark Barracks", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000027": [
+    { "name": "Inferno Tower", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000028": [
+    { "name": "Air Sweeper", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000029": [
+    { "name": "Dark Spell Factory", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000031": [
+    { "name": "Eagle Artillery", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000032": [
+    { "name": "Bomb Tower", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000059": [
+    { "name": "Workshop", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000067": [
+    { "name": "Scattershot", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000068": [
+    { "name": "Pet House", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000070": [
+    { "name": "Blacksmith", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000071": [
+    { "name": "Hero Hall", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000072": [
+    { "name": "Spell Tower", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000077": [
+    { "name": "Monolith", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000084": [
+    { "name": "Multi-Archer Tower", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000085": [
+    { "name": "Ricochet Cannon", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000089": [
+    { "name": "Firespitter", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "1000093": [
+    { "name": "Helper Hut", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "28000000": [
+    { "name": "Barbarian King", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "28000001": [
+    { "name": "Archer Queen", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "28000002": [
+    { "name": "Grand Warden", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "28000004": [
+    { "name": "Royal Champion", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "28000006": [
+    { "name": "Minion Prince", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "28000003": [
+    { "name": "Battle Machine", "village": "Builder Base", "upgrade_type": "Builder Base Builder" }
+  ],
+  "28000005": [
+    { "name": "Battle Copter", "village": "Builder Base", "upgrade_type": "Builder Base Builder" }
+  ],
+  "73000000": [
+    { "name": "L.A.S.S.I.", "village": "Home Base", "upgrade_type": "Pet" }
+  ],
+  "73000001": [
+    { "name": "Mighty Yak", "village": "Home Base", "upgrade_type": "Pet" }
+  ],
+  "73000002": [
+    { "name": "Electro Owl", "village": "Home Base", "upgrade_type": "Pet" }
+  ],
+  "73000003": [
+    { "name": "Unicorn", "village": "Home Base", "upgrade_type": "Pet" }
+  ],
+  "73000004": [
+    { "name": "Phoenix", "village": "Home Base", "upgrade_type": "Pet" }
+  ],
+  "73000007": [
+    { "name": "Poison Lizard", "village": "Home Base", "upgrade_type": "Pet" }
+  ],
+  "73000008": [
+    { "name": "Diggy", "village": "Builder Base", "upgrade_type": "Pet" }
+  ],
+  "73000009": [
+    { "name": "Frosty", "village": "Home Base", "upgrade_type": "Pet" }
+  ],
+  "73000010": [
+    { "name": "Spirit Fox", "village": "Home Base", "upgrade_type": "Pet" }
+  ],
+  "73000011": [
+    { "name": "Angry Jelly", "village": "Home Base", "upgrade_type": "Pet" }
+  ],
+  "73000016": [
+    { "name": "Sneezy", "village": "Home Base", "upgrade_type": "Pet" }
+  ],
+  "4000051": [
+    { "name": "Wall Wrecker", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000052": [
+    { "name": "Battle Blimp", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000062": [
+    { "name": "Stone Slammer", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000075": [
+    { "name": "Siege Barracks", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000087": [
+    { "name": "Log Launcher", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000091": [
+    { "name": "Flame Flinger", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000092": [
+    { "name": "Battle Drill", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000000": [
+    { "name": "Lightning Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000001": [
+    { "name": "Healing Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000002": [
+    { "name": "Rage Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000003": [
+    { "name": "Jump Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000005": [
+    { "name": "Freeze Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000009": [
+    { "name": "Poison Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000010": [
+    { "name": "Earthquake Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000011": [
+    { "name": "Haste Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000016": [
+    { "name": "Clone Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000017": [
+    { "name": "Skeleton Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000028": [
+    { "name": "Bat Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000035": [
+    { "name": "Invisibility Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000053": [
+    { "name": "Recall Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "26000070": [
+    { "name": "Overgrowth Spell", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "12000000": [
+    { "name": "Bomb", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "12000001": [
+    { "name": "Spring Trap", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "12000002": [
+    { "name": "Giant Bomb", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "12000005": [
+    { "name": "Air Bomb", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "12000006": [
+    { "name": "Seeking Air Mine", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "12000008": [
+    { "name": "Skeleton Trap", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "12000016": [
+    { "name": "Tornado Trap", "village": "Home Base", "upgrade_type": "Building" }
+  ],
+  "4000000": [
+    { "name": "Barbarian", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000001": [
+    { "name": "Archer", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000002": [
+    { "name": "Goblin", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000003": [
+    { "name": "Giant", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000004": [
+    { "name": "Wall Breaker", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000005": [
+    { "name": "Balloon", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000006": [
+    { "name": "Wizard", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000007": [
+    { "name": "Healer", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000008": [
+    { "name": "Dragon", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000009": [
+    { "name": "P.E.K.K.A", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000010": [
+    { "name": "Minion", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000011": [
+    { "name": "Hog Rider", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000012": [
+    { "name": "Valkyrie", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000013": [
+    { "name": "Golem", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000015": [
+    { "name": "Witch", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000017": [
+    { "name": "Lava Hound", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000022": [
+    { "name": "Bowler", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000023": [
+    { "name": "Baby Dragon", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000024": [
+    { "name": "Miner", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000053": [
+    { "name": "Yeti", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000058": [
+    { "name": "Ice Golem", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000059": [
+    { "name": "Electro Dragon", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000065": [
+    { "name": "Dragon Rider", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000082": [
+    { "name": "Head Hunter", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000095": [
+    { "name": "Electro Titan", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000097": [
+    { "name": "Apprentice Warden", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000110": [
+    { "name": "Root Rider", "village": "Home Base", "upgrade_type": "Army" }
+  ],
+  "4000123": [
+    { "name": "Druid", "village": "Home Base", "upgrade_type": "Army" }
+  ], 
+  "93000000": "Builder Apprentice",
+  "93000001": "Lab Assistant"
 }

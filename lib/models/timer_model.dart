@@ -1,57 +1,63 @@
 class TimerModel {
-  int? id;
+  int? timerId;
   String player;
-  String village;
-  String upgrade;
-  DateTime expiry;
-  bool isFinished;
+  String? villageType;
+  int? upgradeId;
+  String timerName;
+  String? upgradeType;
+  DateTime readyDateTime;
 
   TimerModel({
-    this.id,
+    this.timerId,
     required this.player,
-    required this.village,
-    required this.upgrade,
-    required this.expiry,
-    this.isFinished = false,
+    required this.villageType,
+    required this.upgradeId,
+    required this.timerName,
+    required this.upgradeType,
+    required this.readyDateTime,
   });
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      'timerId': timerId,
       'player': player,
-      'village': village,
-      'upgrade': upgrade,
-      'expiry': expiry.toIso8601String(),
-      'isFinished' : isFinished ? 1 : 0,
+      'villageType': villageType,
+      'upgradeId': upgradeId,
+      'timerName': timerName,
+      'upgradeType': upgradeType,
+      'readyDateTime': readyDateTime.toIso8601String(),
     };
   }
 
   factory TimerModel.fromMap(Map<String, dynamic> map) {
     return TimerModel(
-      id: map['id'],
-      player: map['player'],
-      village: map['village'],
-      upgrade: map['upgrade'],
-      expiry: DateTime.parse(map['expiry']),
-      isFinished: map['isFinished'] == 1, // Convert int to bool
+      timerId: map['TimerId'],
+      player: map['Player'],
+      villageType: map['VillageType'],
+      upgradeId: map['UpgradeId'],
+      timerName: map['TimerName'],
+      upgradeType: map['UpgradeType'],
+      readyDateTime: DateTime.parse(map['ReadyDateTime']),
     );
   }
 
   TimerModel copyWith({
-    int? id,
+    int? timerId,
     String? player,
-    String? village,
-    String? upgrade,
+    String? villageType,
+    int? upgradeId,
+    String? timerName,
+    String? upgradeType,
     DateTime? expiry,
-    bool? isFinished,
   }) {
     return TimerModel(
-      id: id ?? this.id,
+      timerId: timerId ?? this.timerId,
       player: player ?? this.player,
-      village: village ?? this.village,
-      upgrade: upgrade ?? this.upgrade,
-      expiry: expiry ?? this.expiry,
-      isFinished: isFinished ?? this.isFinished,
+      villageType: villageType ?? this.villageType,
+      upgradeId: upgradeId ?? this.upgradeId,
+      timerName: timerName ?? this.timerName,
+      upgradeType: upgradeType ?? this.upgradeType,
+      readyDateTime: readyDateTime,
     );
   }
 }

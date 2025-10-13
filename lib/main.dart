@@ -1,12 +1,9 @@
-import 'package:clashofnotifications/pages/helpers_page.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:clashofnotifications/pages/timer_page.dart';
 import 'package:clashofnotifications/models/timer_model.dart';
 import 'package:clashofnotifications/helpers/database_helper.dart';
-import 'package:clashofnotifications/pages/boost_page.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/intl.dart';
@@ -240,31 +237,24 @@ class HomePageState extends State<HomePage> {
       final Map<String, dynamic> village = jsonDecode(clipboardText);
 
       final String player = _getPlayerNameFromTag(village['tag']);
-      await dbHelper.deleteTimersForPlayer(player, "Helpers Ready");
+      await dbHelper.deleteTimersForPlayer(player);
 
-      // Load building/unit/hero mappings (can cache these instead of reloading each time)
-      final objectMap = await _loadMapping("objects.json");
-
-      final timers = await _extractUpgradingItems(village, objectMap);
+      final timers = await _extractUpgradingItems(village, dbHelper);
 
       for (final t in timers) {
-        //print("⏳ ${t['name']} (lvl ${t['level']}) is upgrading, ${t['remaining']}s left");
-        Duration duration = Duration(seconds: t['remaining'] - 3); //3 second buffer to account for export/import time difference
-        final expiryTime = DateTime.now().add(duration);
-
         final newTimer = TimerModel(
-          player: player,
-          village: 'Home Village',
-          upgrade: t['name'],
-          expiry: expiryTime,
-          isFinished: false,
+          player: t['player'],
+          villageType: t['villageType'],
+          upgradeId: t['upgradeId'],
+          timerName: t['timerName'] ?? "unknown_${t['upgradeId']}",
+          upgradeType: t['upgradeType'],
+          readyDateTime: t['readyDateTime'],
         );
 
         await dbHelper.insertTimer(newTimer);
       }
     }
   }
-
 
   String _getPlayerNameFromTag(String tag) {
     if (tag == "#Q0YY0CR0") {
@@ -322,36 +312,102 @@ class HomePageState extends State<HomePage> {
 
   Future<List<Map<String, dynamic>>> _extractUpgradingItems(
     Map<String, dynamic> village,
-    Map<String, String> buildingMap,
+    DatabaseHelper dbHelper,
   ) async {
     final List<Map<String, dynamic>> upgradingItems = [];
+      final int timestamp = village['timestamp'];
+      final DateTime exportTime = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
 
-    // List of all sections we care about
     final sections = [
+      "helpers",
       "buildings",
-      "heroes",
-      "pets",
-      "siege_machines",
-      "spells",
       "traps",
       "units",
+      "siege_machines",
+      "heroes",
+      "spells",
+      "pets",
+      "buildings2",
+      "traps2",
+      "units2",
+      "heroes2",
+      "boosts",
     ];
 
     for (final section in sections) {
       if (village.containsKey(section) && village[section] is List) {
-        for (final item in village[section]) {
-          if (item is Map && item.containsKey("timer")) {
-            final String id = item["data"].toString();
-            final String? name = buildingMap[id] ?? "unknown_$id";
+        if (section == "helpers") {
+          for (final item in village[section]) {
+            if (item is Map && item.containsKey("helper_cooldown")) {
+              Duration duration = Duration(seconds: item["helper_cooldown"]);
+              final readyDateTime = exportTime.add(duration);
 
-            upgradingItems.add({
-              "id": id,
-              "name": name,
-              "level": item["lvl"],
-              "remaining": item["timer"], // in seconds
-              "section": section,
-            });
+              upgradingItems.add({
+                'player': _getPlayerNameFromTag(village['tag']),
+                'villageType': 'Home Village',
+                'upgradeId': null,
+                'timerName': "Helpers Ready",
+                'upgradeType': "Alert",
+                'readyDateTime': readyDateTime,
+              });
+
+              break;
+            }
           }
+        } else {
+          for (final item in village[section]) {
+            if (item is Map && item.containsKey("timer")) {
+              final String idStr = item["data"].toString();
+              final int? upgradeId = int.tryParse(idStr);
+
+              final String player = _getPlayerNameFromTag(village['tag']);
+              final String villageType = (section.endsWith("2")) ? 'Builder Base' : 'Home Village';
+              final String upgradeType;
+
+              if (section.contains("buildings") || section.contains("traps") || section.contains("heroes")) {
+                upgradeType = "Building";
+              } else if (section.contains("units") || section.contains("siege_machines") || section.contains("spells")) {
+                upgradeType = "Army";
+              } else if (section.startsWith("pets")) {
+                upgradeType = "Pet";
+              } else {
+                upgradeType = "Unknown";
+              }
+
+              // Fetch name from database
+              final upgradeName = upgradeId != null
+                  ? await dbHelper.getUpgradeName(upgradeId)
+                  : null;
+                  
+              Duration duration = Duration(seconds: item["timer"]);
+              final readyDateTime = exportTime.add(duration);
+
+              upgradingItems.add({
+                'player': player,
+                'villageType': villageType,
+                'upgradeId': upgradeId,
+                'timerName': upgradeName,
+                'upgradeType': upgradeType,
+                'readyDateTime': readyDateTime,
+              });
+            }
+          }
+        }
+      } else if (village.containsKey(section) && section == "boosts") {
+        if (village[section] is Map && village[section].containsKey("clocktower_cooldown")) {
+          final String player = _getPlayerNameFromTag(village['tag']);
+
+          Duration duration = Duration(seconds: village[section]["clocktower_cooldown"]);
+          final readyDateTime = exportTime.add(duration);
+
+          upgradingItems.add({
+            'player': player,
+            'villageType': "Builder Base",
+            'upgradeId': null,
+            'timerName': "Clock Tower Boost Ready",
+            'upgradeType': "Alert",
+            'readyDateTime': readyDateTime,
+          });
         }
       }
     }
@@ -374,19 +430,6 @@ class HomePageState extends State<HomePage> {
   }
 
   return InkWell(
-    onTap: () async {
-      final updatedTimer = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TimerPage(timer: timer),
-        ),
-      );
-
-      if (updatedTimer != null) {
-        await dbHelper.updateTimer(updatedTimer);
-        _loadTimers(); // Reload timers after updating
-      }
-    },
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: const BoxDecoration(
@@ -400,9 +443,9 @@ class HomePageState extends State<HomePage> {
               children: [
                 Text(timer.player, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 Text(
-                  timer.upgrade,
+                  timer.timerName,
                   style: TextStyle(
-                    color: timer.upgrade == "Helpers Ready"
+                    color: timer.timerName == "Helpers Ready"
                         ? Colors.orange
                         : const Color.fromARGB(255, 173, 173, 173), // Otherwise, grey
                   ),
@@ -461,12 +504,11 @@ Color _getBoostedTimeColor(Duration adjustedTimeRemaining) {
 
     // Apply filtering based on selected filters
     final filteredTimers = loadedTimers.where((timer) {
-      bool matchesVillageType = selectedVillageTypes.isEmpty || selectedVillageTypes.contains(timer.village);
       bool matchesPlayer = selectedPlayers.isEmpty || selectedPlayers.contains(timer.player);
-      return matchesVillageType && matchesPlayer;
+      return matchesPlayer;
     }).toList();
 
-    filteredTimers.sort((a, b) => a.expiry.compareTo(b.expiry)); // Sort timers by expiry
+    filteredTimers.sort((a, b) => a.readyDateTime.compareTo(b.readyDateTime));
 
     setState(() {
       timers = filteredTimers;
@@ -476,20 +518,21 @@ Color _getBoostedTimeColor(Duration adjustedTimeRemaining) {
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
-        _checkExpiredTimers();
+        //Keeps the timer in the UI updating every cute lil second
       });
     });
   }
 
   void _checkExpiredTimers() {
-    final now = DateTime.now();
-    for (var timer in timers) {
-      if (timer.expiry.isBefore(now) && !timer.isFinished) {
-        timer.isFinished = true;
-        dbHelper.updateTimer(timer);
-      }
-    }
-    _loadTimers(); // Reload timers after checking expiry
+    //Hopefully no need for this shit anymore
+
+    // final now = DateTime.now();
+    // for (var timer in timers) {
+    //   if (timer.readyDateTime.isBefore(now)) {
+    //     dbHelper.updateTimer(timer);
+    //   }
+    // }
+    // _loadTimers(); // Reload timers after checking expiry
   }
 
   String _formatDuration(Duration duration) {
@@ -622,63 +665,7 @@ Color _getBoostedTimeColor(Duration adjustedTimeRemaining) {
               });
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () async {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const TimerPage()),
-              );
-            },
-          ),
         ],
-      ),
-      drawer: Drawer(
-        child: Container(
-          color: Colors.grey[900], // Match your app's dark background
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Colors.grey[850],
-                ),
-                margin: EdgeInsets.zero, // Removes the default bottom margin
-                child: const Text(
-                  'Pages',
-                  style: TextStyle(
-                    color: Colors.greenAccent,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.flash_on, color: Colors.greenAccent),
-                title: const Text('Boosts', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => BoostPage(timers: timers)),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.assured_workload, color: Colors.greenAccent),
-                title: const Text('Helpers', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => HelpersPage()),
-                  );
-                },
-              ),
-              // Add more ListTiles here for future pages
-            ],
-          ),
-        ),
       ),
       body: Column(
         children: [
@@ -717,13 +704,13 @@ Color _getBoostedTimeColor(Duration adjustedTimeRemaining) {
               itemCount: timers.length,
               itemBuilder: (context, index) {
                 final timer = timers[index];
-                final timeRemaining = timer.expiry.difference(DateTime.now());
+                final timeRemaining = timer.readyDateTime.difference(DateTime.now());
 
                 return Dismissible(
-                  key: Key(timer.id.toString()),
+                  key: Key(timer.timerId.toString()),
                   direction: DismissDirection.endToStart,
                   confirmDismiss: (direction) async {
-                    return await _confirmDelete(context, timer.id!);
+                    return await _confirmDelete(context, timer.timerId!);
                   },
                   background: Container(
                     color: Colors.red,
@@ -733,7 +720,7 @@ Color _getBoostedTimeColor(Duration adjustedTimeRemaining) {
                   ),
                   child: GestureDetector(
                     onLongPress: () async {
-                      return await _updateUpgradeNameOnly(context, timer.id!, timer.upgrade);
+                      return await _updateUpgradeNameOnly(context, timer.timerId!, timer.timerName);
                     },
                     child: _buildTimerTile(timer, timeRemaining),
                   ),
