@@ -122,6 +122,7 @@ class DatabaseHelper {
           {'id': 1000072, 'name': 'Spell Tower', 'type': 'Building'},
           {'id': 1000077, 'name': 'Monolith', 'type': 'Building'},
           {'id': 1000078, 'name': 'O.T.T.O''s Outpost', 'type': 'Building'},
+          {'id': 1000079, 'name': 'Multi-Gear Tower', 'type': 'Building'},
           {'id': 1000081, 'name': 'B.O.B Control/X-Bow', 'type': 'Building'},
           {'id': 1000082, 'name': 'Healing Hut', 'type': 'Building'},
           {'id': 1000084, 'name': 'Multi-Archer Tower', 'type': 'Building'},

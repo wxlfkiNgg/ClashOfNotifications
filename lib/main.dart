@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -253,6 +255,8 @@ class HomePageState extends State<HomePage> {
 
         await dbHelper.insertTimer(newTimer);
       }
+
+      _loadTimers();
     }
   }
 
@@ -359,6 +363,7 @@ class HomePageState extends State<HomePage> {
             if (item is Map && item.containsKey("timer")) {
               final String idStr = item["data"].toString();
               final int? upgradeId = int.tryParse(idStr);
+              final int? helperTimerSeconds = item.containsKey("helper_timer") ? item["helper_timer"] : null;
 
               final String player = _getPlayerNameFromTag(village['tag']);
               final String villageType = (section.endsWith("2")) ? 'Builder Base' : 'Home Village';
@@ -382,13 +387,16 @@ class HomePageState extends State<HomePage> {
               Duration duration = Duration(seconds: item["timer"]);
               final readyDateTime = exportTime.add(duration);
 
+              //Get the actual ready time with relevant boosts applied
+              final DateTime processedReadyDateTime = _processUpgradeDateTime(villageType, upgradeId, exportTime, readyDateTime, village, helperTimerSeconds);
+
               upgradingItems.add({
                 'player': player,
                 'villageType': villageType,
                 'upgradeId': upgradeId,
                 'timerName': upgradeName,
                 'upgradeType': upgradeType,
-                'readyDateTime': readyDateTime,
+                'readyDateTime': processedReadyDateTime,
               });
             }
           }
@@ -415,16 +423,227 @@ class HomePageState extends State<HomePage> {
     return upgradingItems;
   }
 
+  DateTime _processUpgradeDateTime(
+    String villageType,
+    int? upgradeId,
+    DateTime effectiveDateTime,
+    DateTime readyDateTime,
+    Map<String, dynamic> villageData,
+    int? helperTimerSeconds,
+  ) {
+    final int? upgradeTypeId = _getUpgradeTypeId(upgradeId);
+    int remainingSeconds = readyDateTime.difference(effectiveDateTime).inSeconds;
+
+    if (remainingSeconds <= 0) {
+      return effectiveDateTime; // Already completed
+    }
+
+    // Hardcoded boosts and their properties (replace with dynamic data if needed)
+    final List<Map<String, dynamic>> activeBoosts = [];
+
+    // Extract boosts from the JSON
+    if (villageData.containsKey('boosts') && villageData['boosts'] is Map) {
+      final Map<String, dynamic> boosts = villageData['boosts'];
+
+      // Hardcoded boost amounts and their affected types
+      final Map<String, Map<String, dynamic>> boostDetails = {
+        'builder_boost': {
+          'boostAmount': 24.0,
+          'affectedVillageType': 'Home Village',
+          'affectedUpgradeType': 'Building',
+        },
+        'lab_boost': {
+          'boostAmount': 24.0,
+          'affectedVillageType': 'Home Village',
+          'affectedUpgradeType': 'Army',
+        },
+        'pet_boost': {
+          'boostAmount': 24.0,
+          'affectedVillageType': 'Home Village',
+          'affectedUpgradeType': 'Pet',
+        },
+        'clocktower_boost': {
+          'boostAmount': 10.0,
+          'affectedVillageType': 'Builder Base',
+          'affectedUpgradeType': null, // Affects all upgrades in Builder Base
+        },
+        'builder_consumable': {
+          'boostAmount': 2.0,
+          'affectedVillageType': 'Home Village',
+          'affectedUpgradeType': 'Building',
+        },
+        'lab_consumable': {
+          'boostAmount': 4.0,
+          'affectedVillageType': 'Home Village',
+          'affectedUpgradeType': 'Army',
+        },
+      };
+
+      // Iterate over the boosts in the JSON
+      boosts.forEach((boostName, duration) {
+        if (boostDetails.containsKey(boostName)) {
+          final boostInfo = boostDetails[boostName]!;
+          activeBoosts.add({
+            'boostName': boostName,
+            'boostAmount': boostInfo['boostAmount'], // Hardcoded boost amount
+            'startTime': effectiveDateTime, // Assume the boost starts now
+            'endTime': effectiveDateTime.add(Duration(seconds: duration)), // Duration from JSON
+            'affectedVillageType': boostInfo['affectedVillageType'], // Village type
+            'affectedUpgradeType': boostInfo['affectedUpgradeType'], // Upgrade type
+          });
+        }
+      });
+    }
+
+    // Add helper boost if `helper_timer` is provided
+    if (helperTimerSeconds != null && helperTimerSeconds > 0) {
+      // Step 2: Determine the relevant helper based on the UpgradeTypeId
+      final Map<int, int> helperUpgradeTypeMapping = {
+        93000000: 1, // Builder Apprentice -> Building upgrades
+        93000001: 2, // Lab Assistant -> Army upgrades
+      };
+
+      int? relevantHelperId;
+      helperUpgradeTypeMapping.forEach((helperId, typeId) {
+        if (typeId == upgradeTypeId) {
+          relevantHelperId = helperId;
+        }
+      });
+
+      // Step 3: Get the helper's level from the JSON data
+      if (relevantHelperId != null && villageData.containsKey('helpers') && villageData['helpers'] is List) {
+        final List<dynamic> helpers = villageData['helpers'];
+        for (final helper in helpers) {
+          if (helper is Map && helper['data'] == relevantHelperId) {
+            final int helperLevel = helper['lvl'];
+
+            // Step 4: Add the helper boost to activeBoosts
+            activeBoosts.add({
+              'boostName': 'Helper Boost',
+              'boostAmount': helperLevel.toDouble() + 1.0, // Use the helper level as the boost amount
+              'startTime': effectiveDateTime,
+              'endTime': effectiveDateTime.add(Duration(seconds: helperTimerSeconds)),
+              'affectedVillageType': villageType,
+              'affectedUpgradeType': upgradeTypeId,
+            });
+            break; // Stop once the relevant helper is found
+          }
+        }
+      }
+    }
+
+    // Step 1: Filter boosts relevant to this upgrade
+    final List<Map<String, dynamic>> relevantBoosts = activeBoosts.where((boost) {
+      final bool villageMatches = boost['affectedVillageType'] == null ||
+          boost['affectedVillageType'] == villageType;
+      final bool upgradeMatches = boost['affectedUpgradeType'] == null ||
+          (upgradeId != null && boost['affectedUpgradeType'] == upgradeTypeId);
+      return villageMatches && upgradeMatches;
+    }).toList();
+
+    // Step 2: Create a timeline of boost segments
+    final List<Map<String, dynamic>> segments = [];
+    final List<DateTime> boundaries = relevantBoosts
+        .expand((boost) => [boost['startTime'] as DateTime, boost['endTime'] as DateTime])
+        .toSet()
+        .toList()
+      ..sort();
+
+    for (int i = 0; i < boundaries.length - 1; i++) {
+      final segmentStart = boundaries[i];
+      final segmentEnd = boundaries[i + 1];
+
+      // Calculate the total boost for this segment
+      double totalBoost = 0.0; // Default is no boost
+      for (final boost in relevantBoosts) {
+        if (segmentStart.isBefore(boost['endTime']) &&
+            segmentEnd.isAfter(boost['startTime'])) {
+          totalBoost += boost['boostAmount'];
+        }
+      }
+
+      segments.add({
+        'startTime': segmentStart,
+        'endTime': segmentEnd,
+        'boostAmount': totalBoost,
+      });
+    }
+
+    // Step 3: Process each segment to calculate the effective upgrade time
+    DateTime effectiveTime = effectiveDateTime;
+
+    for (final segment in segments) {
+      if (remainingSeconds <= 0) break;
+
+      final segmentStart = segment['startTime'] as DateTime;
+      final segmentEnd = segment['endTime'] as DateTime;
+      final boostAmount = segment['boostAmount'] as double;
+
+      final segmentDuration = segmentEnd.difference(segmentStart).inSeconds;
+
+      if (segmentStart.isAfter(effectiveTime)) {
+        // Skip segments that are in the past
+        continue;
+      }
+
+      final effectiveSegmentDuration =
+          (segmentDuration * boostAmount + 1).ceil(); // Adjust for boost
+
+      if (effectiveSegmentDuration >= remainingSeconds) {
+        // If this segment completes the upgrade
+        effectiveTime = effectiveTime.add(Duration(seconds: (remainingSeconds / boostAmount).ceil()));
+        remainingSeconds = 0;
+      } else {
+        // Otherwise, subtract the effective time and move to the next segment
+        effectiveTime = segmentEnd;
+        remainingSeconds -= effectiveSegmentDuration;
+      }
+    }
+
+    // Step 4: If there's still time remaining, add it without boosts
+    if (remainingSeconds > 0) {
+      effectiveTime = effectiveTime.add(Duration(seconds: remainingSeconds));
+    }
+
+    return effectiveTime;
+  }
+
+  // Helper function to get the upgrade type ID
+  int? _getUpgradeTypeId(int? upgradeId) {
+    if (upgradeId == null) return null;
+
+    // Example mapping of upgrade IDs to upgrade types
+    if (upgradeId >= 1000000 && upgradeId < 2000000) {
+      return 1; // Building
+    } else if (upgradeId >= 4000000 && upgradeId < 5000000) {
+      return 2; // Army
+    } else {
+      return null; // Unknown
+    }
+  }
+
   // Method to build each timer tile
   Widget _buildTimerTile(TimerModel timer, Duration timeRemaining) {
   // Determine the color based on time remaining
   Color timeColor;
   if (timer.player == "The Wolf") {
-    timeColor = Colors.green;
+    if (timer.villageType == "Home Village") {
+      timeColor = Colors.green;
+    } else {
+      timeColor = Colors.greenAccent;
+    }
   } else if (timer.player == "Splyce") {
-    timeColor = Colors.blue;
+    if (timer.villageType == "Home Village") {
+      timeColor = Colors.blueAccent;
+    } else {
+      timeColor = Colors.lightBlueAccent;
+    }
   } else if (timer.player == "P.L.U.C.K.") {
-    timeColor = Colors.orange;
+    if (timer.villageType == "Home Village") {
+      timeColor = Colors.deepOrangeAccent;
+    } else {
+      timeColor = Colors.orange;
+    }
   } else {
     timeColor = Colors.grey; // Default color for other players
   }
@@ -445,7 +664,7 @@ class HomePageState extends State<HomePage> {
                 Text(
                   timer.timerName,
                   style: TextStyle(
-                    color: timer.timerName == "Helpers Ready"
+                    color: timer.timerName == "Helpers Ready" || timer.timerName == "Clock Tower Boost Ready"
                         ? Colors.orange
                         : const Color.fromARGB(255, 173, 173, 173), // Otherwise, grey
                   ),
