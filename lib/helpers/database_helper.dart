@@ -333,6 +333,38 @@ class DatabaseHelper {
     );
   }
 
+  Future<int?> getUpgradeTypeIdFromUpgradeId(int? upgradeId) async {
+    final db = await database;
+
+    // Query the 'upgrades' table to get the UpgradeTypeId for the given UpgradeId
+    final List<Map<String, dynamic>> result = await db.query(
+      tableNameUpgrades,
+      columns: ['UpgradeType'], // Assuming 'UpgradeType' is the column name
+      where: 'UpgradeId = ?',
+      whereArgs: [upgradeId],
+      limit: 1,
+    );
+
+    if (result.isNotEmpty) {
+      // Map the UpgradeType string to an integer ID (if needed)
+      final String upgradeType = result.first['UpgradeType'] as String;
+
+      // Map the upgrade type to an integer ID
+      switch (upgradeType) {
+        case 'Building':
+          return 1;
+        case 'Army':
+          return 2;
+        case 'Pet':
+          return 3;
+        default:
+          return null; // Unknown type
+      }
+    }
+
+    return null; // Return null if no matching UpgradeId is found
+  }
+
   Future<void> _scheduleNotification(TimerModel timer) async {
     String upgradeMessage;
     if (timer.timerName == 'Helpers Ready') {

@@ -383,12 +383,19 @@ class HomePageState extends State<HomePage> {
               final upgradeName = upgradeId != null
                   ? await dbHelper.getUpgradeName(upgradeId)
                   : null;
-                  
+
               Duration duration = Duration(seconds: item["timer"]);
               final readyDateTime = exportTime.add(duration);
 
-              //Get the actual ready time with relevant boosts applied
-              final DateTime processedReadyDateTime = _processUpgradeDateTime(villageType, upgradeId, exportTime, readyDateTime, village, helperTimerSeconds);
+              // Get the actual ready time with relevant boosts applied
+              final DateTime processedReadyDateTime = await _processUpgradeDateTime(
+                villageType,
+                upgradeId,
+                exportTime,
+                readyDateTime,
+                village,
+                helperTimerSeconds,
+              );
 
               upgradingItems.add({
                 'player': player,
@@ -423,15 +430,16 @@ class HomePageState extends State<HomePage> {
     return upgradingItems;
   }
 
-  DateTime _processUpgradeDateTime(
+  Future<DateTime> _processUpgradeDateTime(
     String villageType,
     int? upgradeId,
     DateTime effectiveDateTime,
     DateTime readyDateTime,
     Map<String, dynamic> villageData,
     int? helperTimerSeconds,
-  ) {
-    final int? upgradeTypeId = _getUpgradeTypeId(upgradeId);
+  ) async {
+    // Await the asynchronous database call
+    final int? upgradeTypeId = await dbHelper.getUpgradeTypeIdFromUpgradeId(upgradeId);
     int remainingSeconds = readyDateTime.difference(effectiveDateTime).inSeconds;
 
     if (remainingSeconds <= 0) {
@@ -606,20 +614,6 @@ class HomePageState extends State<HomePage> {
     }
 
     return effectiveTime;
-  }
-
-  // Helper function to get the upgrade type ID
-  int? _getUpgradeTypeId(int? upgradeId) {
-    if (upgradeId == null) return null;
-
-    // Example mapping of upgrade IDs to upgrade types
-    if (upgradeId >= 1000000 && upgradeId < 2000000) {
-      return 1; // Building
-    } else if (upgradeId >= 4000000 && upgradeId < 5000000) {
-      return 2; // Army
-    } else {
-      return null; // Unknown
-    }
   }
 
   // Method to build each timer tile
