@@ -310,15 +310,6 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [timer.timerId],
     );
-
-    // if (!timer.isFinished) {
-    //   // Cancel existing notification and reschedule
-    //   await notificationsPlugin.cancel(timer.timerId!);
-    //   await _scheduleNotification(timer);
-    // }
-    // else if (timer.timerName == 'Helpers Ready') {
-    //   await _scheduleNotification(timer);
-    // }
   }
   
   Future<void> updateTimerUpgradeName(int timerId, String newName) async {
@@ -333,7 +324,7 @@ class DatabaseHelper {
     );
   }
 
-  Future<int?> getUpgradeTypeIdFromUpgradeId(int? upgradeId) async {
+  Future<String?> getUpgradeTypeFromUpgradeId(int? upgradeId) async {
     final db = await database;
 
     // Query the 'upgrades' table to get the UpgradeTypeId for the given UpgradeId
@@ -346,20 +337,8 @@ class DatabaseHelper {
     );
 
     if (result.isNotEmpty) {
-      // Map the UpgradeType string to an integer ID (if needed)
       final String upgradeType = result.first['UpgradeType'] as String;
-
-      // Map the upgrade type to an integer ID
-      switch (upgradeType) {
-        case 'Building':
-          return 1;
-        case 'Army':
-          return 2;
-        case 'Pet':
-          return 3;
-        default:
-          return null; // Unknown type
-      }
+      return upgradeType;
     }
 
     return null; // Return null if no matching UpgradeId is found
@@ -368,7 +347,9 @@ class DatabaseHelper {
   Future<void> _scheduleNotification(TimerModel timer) async {
     String upgradeMessage;
     if (timer.timerName == 'Helpers Ready') {
-      upgradeMessage = 'Helpers are ready!';
+      upgradeMessage = 'Helpers are ready for action';
+    } else if (timer.timerName == 'Clock Tower Boost Ready') {
+      upgradeMessage = 'Clock Tower Boost is ready';
     } else {
       upgradeMessage = '${timer.timerName} has finished upgrading.';
     }
