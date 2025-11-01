@@ -176,6 +176,7 @@ class DatabaseHelper {
           {'id': 4000106, 'name': 'Hog Glider/Wizard', 'type': 'Army'},
           {'id': 4000110, 'name': 'Root Rider', 'type': 'Army'},
           {'id': 4000123, 'name': 'Druid', 'type': 'Army'},
+          {'id': 4000132, 'name': 'Thrower', 'type': 'Army'},
           {'id': 12000000, 'name': 'Bomb', 'type': 'Building'},
           {'id': 12000001, 'name': 'Spring Trap', 'type': 'Building'},
           {'id': 12000002, 'name': 'Giant Bomb', 'type': 'Building'},
