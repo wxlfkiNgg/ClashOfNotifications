@@ -248,6 +248,7 @@ class HomePageState extends State<HomePage> {
                 'villageType': 'Home Village',
                 'upgradeId': null,
                 'timerName': "Helpers Ready",
+                'nextUpgrade': null,
                 'upgradeType': "Alert",
                 'readyDateTime': readyDateTime,
               });
@@ -299,6 +300,7 @@ class HomePageState extends State<HomePage> {
                 'villageType': villageType,
                 'upgradeId': upgradeId,
                 'timerName': upgradeName,
+                'nextUpgrade': null,
                 'upgradeType': upgradeType,
                 'readyDateTime': processedReadyDateTime,
               });
@@ -317,6 +319,7 @@ class HomePageState extends State<HomePage> {
             'villageType': "Builder Base",
             'upgradeId': null,
             'timerName': "Clock Tower Boost Ready",
+            'nextUpgrade': null,
             'upgradeType': "Alert",
             'readyDateTime': readyDateTime,
           });
@@ -711,6 +714,45 @@ class HomePageState extends State<HomePage> {
     );
   }
 
+  Future<bool> _confirmDelete(BuildContext context, int? timerId) async {
+    if (timerId != null) {
+      return await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF212121), // Dark grey
+            title: const Text(
+              "Delete Timer?",
+              style: TextStyle(color: Color(0xFFF5F5F5)), // White
+            ),
+            content: const Text(
+              "Are you sure you want to delete this timer?",
+              style: TextStyle(color: Color(0xFFF5F5F5)), // White
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text("Cancel", style: TextStyle(color: Color(0xFFBDBDBD))), // Medium grey
+              ),
+              TextButton(
+                onPressed: () {
+                  dbHelper.deleteTimer(timerId);
+                  _loadTimers(); // Reload timers after deletion
+                  Navigator.of(context).pop(true);
+                },
+                child: const Text("Delete", style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          );
+        },
+      ) ??
+      false;
+    }
+    else {
+      return false;
+    }
+  }
+
   Color _getVillageIconColour(String? villageType) {
     switch (villageType) {
       case "Home Village":
@@ -849,40 +891,46 @@ class HomePageState extends State<HomePage> {
               ? _formatDuration(readyDateTime.difference(DateTime.now()))
               : DateFormat('E, d MMM h:mm a').format(readyDateTime);
 
-          return Card(
-            color: const Color(0xFF212121),
-            margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 1.0),
-            child: ListTile(
-              leading: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    villageIcon,
-                    color: _getVillageIconColour(villageType),
-                  ),
-                  const SizedBox(height: 8.0),
-                  Icon(
-                    upgradeIcon,
-                    color: _getUpgradeColour(upgradeType),
-                  ),
-                ],
-              ),
-              title: Text(
-                player,
-                style: TextStyle(fontWeight: FontWeight.bold, color: getPlayerColour(player)),
-              ),
-              subtitle: Text(
-                timerName,
-                style: TextStyle(color: _getTimerFontColour(upgradeType)),
-              ),
-              trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
+          return GestureDetector(
+            onLongPress: () async {
+             await _confirmDelete(context, timer.timerId);
+            },
+            child: Card(
+              color: const Color(0xFF212121),
+              margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 1.0),
+              child: ListTile(
+                leading: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(villageIcon, color: _getVillageIconColour(villageType)),
+                    const SizedBox(height: 8.0),
+                    Icon(upgradeIcon, color: _getUpgradeColour(upgradeType)),
+                  ],
                 ),
-                child: Text(
-                  timeDisplay, // Time remaining or ready date
-                  style: TextStyle(color: _getUpgradeTimeColor(readyDateTime), fontWeight: FontWeight.bold, fontSize: 14),
+                title: Text(
+                  player,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: getPlayerColour(player),
+                  ),
+                ),
+                subtitle: Text(
+                 timerName,
+                 style: TextStyle(color: _getTimerFontColour(upgradeType)),
+                ),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    timeDisplay,
+                    style: TextStyle(
+                      color: _getUpgradeTimeColor(readyDateTime),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
                 ),
               ),
             ),

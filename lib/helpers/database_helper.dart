@@ -202,6 +202,7 @@ class DatabaseHelper {
           {'id': 26000035, 'name': 'Invisibility Spell', 'type': 'Army'},
           {'id': 26000053, 'name': 'Recall Spell', 'type': 'Army'},
           {'id': 26000070, 'name': 'Overgrowth Spell', 'type': 'Army'},
+          {'id': 26000098, 'name': 'Revive Spell', 'type': 'Army'},
           {'id': 28000000, 'name': 'Barbarian King', 'type': 'Building'},
           {'id': 28000001, 'name': 'Archer Queen', 'type': 'Building'},
           {'id': 28000002, 'name': 'Grand Warden', 'type': 'Building'},
@@ -253,11 +254,13 @@ class DatabaseHelper {
     return List.generate(maps.length, (i) => TimerModel.fromMap(maps[i]));
   }
 
-  Future<void> deleteTimer(int id) async {
-    final db = await database;
-    await db.delete(tableNameTimers, where: 'TimerId = ?', whereArgs: [id]);
+  Future<void> deleteTimer(int? id) async {
+    if (id != null) {
+      final db = await database;
+      await db.delete(tableNameTimers, where: 'TimerId = ?', whereArgs: [id]);
 
-    await notificationsPlugin.cancel(id);
+      await notificationsPlugin.cancel(id);
+    }
   }
 
   Future<void> deleteTimersForPlayer(String player) async {
@@ -313,18 +316,6 @@ class DatabaseHelper {
     );
   }
   
-  Future<void> updateTimerUpgradeName(int timerId, String newName) async {
-    final db = await database;
-    await db.update(
-      'timers',
-      {
-        'upgrade': newName,
-      },
-      where: 'id = ?',
-      whereArgs: [timerId],
-    );
-  }
-
   Future<String?> getUpgradeTypeFromUpgradeId(int? upgradeId) async {
     final db = await database;
 
