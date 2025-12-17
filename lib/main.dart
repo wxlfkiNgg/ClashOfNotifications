@@ -94,7 +94,7 @@ class HomePage extends StatefulWidget {
 class HomePageState extends State<HomePage> {
   final List<String> villageTypes = ['Home Village', 'Builder Base'];
   final List<String> upgradeTypes = ['Building', 'Army', 'Hero', 'Pet', 'Alert'];
-  final List<String> players = ['The Wolf', 'Splyce', 'P.L.U.C.K.'];
+  final List<String> players = ['The Wolf', 'The Big Fella', 'Splyce', 'P.L.U.C.K.'];
 
   List<TimerModel> timers = [];
   late DatabaseHelper dbHelper;
@@ -160,6 +160,8 @@ class HomePageState extends State<HomePage> {
   String _getPlayerNameFromTag(String tag) {
     if (tag == "#Q0YY0CR0") {
       return "The Wolf";
+    } else if (tag == "#L9L80R00") {
+      return "The Big Fella";
     } else if (tag == "#GRJLG0RR0") {
       return "Splyce";
     } else if (tag == "#GQUV2JRY2") {
@@ -798,7 +800,7 @@ class HomePageState extends State<HomePage> {
   }
 
   Color getPlayerColour(String player) {
-    if (player == "The Wolf") {
+    if (player == "The Wolf" || player == "The Big Fella") {
       return Colors.green;
     } else if (player == "Splyce") {
       return Colors.blueAccent;
