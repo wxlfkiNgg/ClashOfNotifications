@@ -94,7 +94,7 @@ class HomePage extends StatefulWidget {
 class HomePageState extends State<HomePage> {
   final List<String> villageTypes = ['Home Village', 'Builder Base'];
   final List<String> upgradeTypes = ['Building', 'Army', 'Hero', 'Pet', 'Alert'];
-  final List<String> players = ['The Wolf', 'Splyce', 'P.L.U.C.K.'];
+  final List<String> players = ['The Wolf', 'Splyce', 'P.L.U.C.K.', 'The Big Fella'];
 
   List<TimerModel> timers = [];
   late DatabaseHelper dbHelper;
@@ -164,6 +164,16 @@ class HomePageState extends State<HomePage> {
       return "Splyce";
     } else if (tag == "#GQUV2JRY2") {
       return "P.L.U.C.K.";
+    } else if (tag == "#GJ9UCCG8J") {
+      return "Joe";
+    } else if (tag == "#GVLPGGQ2G") {
+      return "Bruce 2";
+    } else if (tag == "#GCRY889L9") {
+      return "Bruce 3";
+    } else if (tag == "#GJUGPPRY2") {
+      return "Bruce 4";
+    } else if (tag == "#GUV22LQPP") {
+      return "Bruce 5";
     } else {
       return "Unknown: $tag";
     }
@@ -802,6 +812,8 @@ class HomePageState extends State<HomePage> {
       return Colors.green;
     } else if (player == "Splyce") {
       return Colors.blueAccent;
+    } else if (player == "The Big Fella") { 
+      return Colors.green;
     } else if (player == "P.L.U.C.K.") {
       return Colors.deepOrangeAccent;
     } else {
@@ -886,10 +898,7 @@ class HomePageState extends State<HomePage> {
               upgradeIcon = Icons.question_mark;
           }
 
-          // Format the time/duration based on the display mode
-          final String timeDisplay = displayMode == "Timer"
-              ? _formatDuration(readyDateTime.difference(DateTime.now()))
-              : DateFormat('E, d MMM h:mm a').format(readyDateTime);
+          final String timeDisplay = _formatDuration(readyDateTime.difference(DateTime.now()));
 
           return GestureDetector(
             onLongPress: () async {
@@ -939,6 +948,8 @@ class HomePageState extends State<HomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          String test = _formatDuration(const Duration(hours: 24));
+
           final bool confirmed = await _uploadFromClipboard();
           if (confirmed) {
             ScaffoldMessenger.of(context).showSnackBar(

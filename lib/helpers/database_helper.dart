@@ -127,8 +127,10 @@ class DatabaseHelper {
           {'id': 1000082, 'name': 'Healing Hut', 'type': 'Building'},
           {'id': 1000084, 'name': 'Multi-Archer Tower', 'type': 'Building'},
           {'id': 1000085, 'name': 'Ricochet Cannon', 'type': 'Building'},
+          {'id': 1000086, 'name': 'Revenge Tower', 'type': 'Building'},
           {'id': 1000089, 'name': 'Firespitter', 'type': 'Building'},
           {'id': 1000093, 'name': 'Helper Hut', 'type': 'Building'},
+          {'id': 1000102, 'name': 'Super Wizard Tower', 'type': 'Building'},
           {'id': 4000000, 'name': 'Barbarian', 'type': 'Army'},
           {'id': 4000001, 'name': 'Archer', 'type': 'Army'},
           {'id': 4000002, 'name': 'Goblin', 'type': 'Army'},
@@ -177,6 +179,8 @@ class DatabaseHelper {
           {'id': 4000110, 'name': 'Root Rider', 'type': 'Army'},
           {'id': 4000123, 'name': 'Druid', 'type': 'Army'},
           {'id': 4000132, 'name': 'Thrower', 'type': 'Army'},
+          {'id': 4000150, 'name': 'Furnace', 'type': 'Army'},
+          {'id': 4000177, 'name': 'Meteor Golem', 'type': 'Army'},
           {'id': 12000000, 'name': 'Bomb', 'type': 'Building'},
           {'id': 12000001, 'name': 'Spring Trap', 'type': 'Building'},
           {'id': 12000002, 'name': 'Giant Bomb', 'type': 'Building'},
@@ -203,6 +207,7 @@ class DatabaseHelper {
           {'id': 26000053, 'name': 'Recall Spell', 'type': 'Army'},
           {'id': 26000070, 'name': 'Overgrowth Spell', 'type': 'Army'},
           {'id': 26000098, 'name': 'Revive Spell', 'type': 'Army'},
+          {'id': 26000120, 'name': 'Totem Spell', 'type': 'Army'},
           {'id': 28000000, 'name': 'Barbarian King', 'type': 'Building'},
           {'id': 28000001, 'name': 'Archer Queen', 'type': 'Building'},
           {'id': 28000002, 'name': 'Grand Warden', 'type': 'Building'},
@@ -338,12 +343,41 @@ class DatabaseHelper {
 
   Future<void> _scheduleNotification(TimerModel timer) async {
     String upgradeMessage;
+    bool quietNotification = false;
     if (timer.timerName == 'Helpers Ready') {
       upgradeMessage = 'Helpers are ready for action';
+      quietNotification = true;
     } else if (timer.timerName == 'Clock Tower Boost Ready') {
       upgradeMessage = 'Clock Tower Boost is ready';
+      quietNotification = true;
     } else {
       upgradeMessage = '${timer.timerName} has finished upgrading.';
+    }
+    
+    if (timer.player.contains('Bruce') || timer.player == 'Joe') {
+      quietNotification = true;
+    }
+
+    AndroidNotificationDetails androidDetails;
+
+    if (quietNotification) {
+      androidDetails = const AndroidNotificationDetails(
+        'timer_channel_quiet',
+        'Timer Notifications Quiet',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: false,
+        sound: null,
+      );
+    }
+    else {
+      androidDetails = const AndroidNotificationDetails(
+        'timer_channel',
+        'Timer Notifications',
+        importance: Importance.max,
+        priority: Priority.high,
+        fullScreenIntent: true,
+      );
     }
 
     await notificationsPlugin.zonedSchedule(
@@ -351,14 +385,8 @@ class DatabaseHelper {
       timer.player,
       upgradeMessage,
       tz.TZDateTime.from(timer.readyDateTime, tz.local),
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'timer_channel',
-          'Timer Notifications',
-          importance: Importance.max,
-          priority: Priority.high,
-          fullScreenIntent: true,
-        ),
+      NotificationDetails(
+        android: androidDetails,
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.dateAndTime,
