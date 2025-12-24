@@ -174,6 +174,8 @@ class HomePageState extends State<HomePage> {
       return "Bruce 4";
     } else if (tag == "#GUV22LQPP") {
       return "Bruce 5";
+    } else if (tag == "#L9L80R00") {
+      return "The Big Fella";
     } else {
       return "Unknown: $tag";
     }
