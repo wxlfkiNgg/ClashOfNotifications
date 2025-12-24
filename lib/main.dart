@@ -277,6 +277,10 @@ class HomePageState extends State<HomePage> {
               final String villageType = (section.endsWith("2")) ? 'Builder Base' : 'Home Village';
               final String upgradeType;
 
+              if (player == "The Big Fella" && villageType == "Builder Base"){
+                break;
+              }
+
               if (section.contains("buildings") || section.contains("traps") || section.contains("heroes")) {
                 upgradeType = "Building";
               } else if (section.contains("units") || section.contains("siege_machines") || section.contains("spells")) {
