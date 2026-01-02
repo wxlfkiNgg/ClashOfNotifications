@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -12,26 +10,21 @@ import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 
-final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
-
 void main() async {
+  final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
   WidgetsFlutterBinding.ensureInitialized();
 
-  const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-
+  const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
   final InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
   );
-
   await notificationsPlugin.initialize(initializationSettings);
+  
   tz.initializeTimeZones();
-  tz.setLocalLocation(tz.getLocation('Australia/Brisbane'));
+  tz.setLocalLocation(tz.getLocation('Australia/Brisbane')); //Daylight saving is for nerds
 
-  // Force Portrait Mode
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp, // Normal Portrait
-  ]);
+  // Force portrait orientation - app looks dogshit in landscape and this is easier than fixing
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   runApp(const MyApp());
 }
@@ -101,12 +94,11 @@ class HomePageState extends State<HomePage> {
   Timer? _timer;
   String displayMode = 'Timer';
 
-  // State variables for the selected filters
   List<String> selectedVillageTypes = [];
   List<String> selectedUpgradeTypes = [];
   List<String> selectedPlayers = [];
 
-  // Method to request notification permission
+  // Ask for permission (simp) to send notifications if not already approved
   Future<void> _requestNotificationPermission() async {
     var status = await Permission.notification.status;
     if (!status.isGranted) {
@@ -120,28 +112,21 @@ class HomePageState extends State<HomePage> {
   }
 
   Future<bool> _uploadFromClipboard() async {
-    final clipboardText = await _getClipboardData();
+    final clipboardText = await _getClipboardData() ?? ''; //For this case we'll just use an empty string (not null) if there's no text retrieved from the clipboard
+    final isValid = await _validateTextIsVillageExport(clipboardText);
 
-    if (clipboardText == null || clipboardText.isEmpty) {
-      return false;
-    }
-
-    final isValid = await _validateClipboardData(clipboardText);
-
-    if (isValid) {
+    if (isValid){
       final Map<String, dynamic> village = jsonDecode(clipboardText);
+      final String playerName = _getPlayerNameFromTag(village['tag']);
+      await dbHelper.deleteTimersForPlayer(playerName);
 
-      final String player = _getPlayerNameFromTag(village['tag']);
-      await dbHelper.deleteTimersForPlayer(player);
-
-      final timers = await _extractUpgradingItems(village, dbHelper);
-
+      final List<Map<String, dynamic>> timers = await _extractUpgradingItems(village, dbHelper);
       for (final t in timers) {
         final newTimer = TimerModel(
           player: t['player'],
           villageType: t['villageType'],
           upgradeId: t['upgradeId'],
-          timerName: t['timerName'] ?? "unknown_${t['upgradeId']}",
+          timerName: t['timerName'] ?? 'unknown_${t['upgradeId']}',
           upgradeType: t['upgradeType'],
           readyDateTime: t['readyDateTime'],
         );
@@ -149,78 +134,70 @@ class HomePageState extends State<HomePage> {
         await dbHelper.insertTimer(newTimer);
       }
 
-      _loadTimers();
-      return true;
+      _loadTimers(); //Refresh that shit
     }
-    else {
-      return false;
-    }
+
+    return isValid;
   }
 
   String _getPlayerNameFromTag(String tag) {
-    if (tag == "#Q0YY0CR0") {
-      return "The Wolf";
-    } else if (tag == "#GRJLG0RR0") {
-      return "Splyce";
-    } else if (tag == "#GQUV2JRY2") {
-      return "P.L.U.C.K.";
-    } else if (tag == "#GJ9UCCG8J") {
-      return "Joe";
-    } else if (tag == "#GVLPGGQ2G") {
-      return "Bruce 2";
-    } else if (tag == "#GCRY889L9") {
-      return "Bruce 3";
-    } else if (tag == "#GJUGPPRY2") {
-      return "Bruce 4";
-    } else if (tag == "#GUV22LQPP") {
-      return "Bruce 5";
-    } else if (tag == "#L9L80R00") {
-      return "The Big Fella";
-    } else {
-      return "Unknown: $tag";
+    switch (tag) {
+      case '#Q0YY0CR0':
+        return 'The Wolf';
+      case '#GRJLG0RR0':
+        return 'Splyce';
+      case '#GQUV2JRY2':
+        return 'P.L.U.C.K.';
+      case '#L9L80R00':
+        return 'The Big Fella';
+      case '#G9C8VL9JG':
+        return 'Sheepashoo';
+      default:
+        return 'Unknown: $tag';
     }
   }
 
-  Future<bool> _validateClipboardData(String clipboardData) async {
-    if (clipboardData.isEmpty) return false;
+  //Super simple check on provided text to check if it's actually a village export
+  //This is not the be-all and end-all, but it should catch 99.999999% of uploaded data that isn't a clash village export
+  //Also, did you know that 62% of statistics are completely made up? 
+  Future<bool> _validateTextIsVillageExport(String text) async {
+    if (text.isNotEmpty) {
+      try {
+        final parsed = jsonDecode(text); //If the text isn't a json this'll fail. But do not fret, we have a catch  here for just such an occasion
 
-    try {
-      final parsed = jsonDecode(clipboardData);
-
-      // Top-level must be a Map
-      if (parsed is! Map<String, dynamic>) return false;
-
-      // Required keys
-      final requiredKeys = ["tag", "timestamp", "buildings"];
-      for (var key in requiredKeys) {
-        if (!parsed.containsKey(key)) return false;
-      }
-
-      // Basic type checks
-      if (parsed["tag"] is! String) return false;
-      if (parsed["timestamp"] is! int) return false;
-      if (parsed["buildings"] is! List) return false;
-
-      // Quick validation of at least one building entry
-      if ((parsed["buildings"] as List).isNotEmpty) {
-        final firstBuilding = (parsed["buildings"] as List).first;
-        if (firstBuilding is! Map) return false;
-        if (!firstBuilding.containsKey("data") || !firstBuilding.containsKey("lvl")) {
+        // First make sure the top level is a Map
+        if (parsed is! Map<String, dynamic>) {
           return false;
         }
-      }
 
-      return true;
-    } catch (e) {
-      // jsonDecode failed or validation failed
+        // Check we have the right keys, we could add more but honestly it seemed redundant beyond these three
+        final requiredKeys = ['tag', 'timestamp', 'buildings'];
+        for (String key in requiredKeys) {
+          if (!parsed.containsKey(key)) {
+            return false;
+          }
+        }
+
+        // Basic data type checks on the aformentioned keys. By this stage we should be gucci but you never know aye
+        if (parsed['tag'] is! String || parsed['timestamp'] is! int || parsed['buildings'] is! List) {
+          return false;
+        }
+
+        // At this point we are being pedantic but we want to make sure the buildings field at least has an entry with the required fields
+        if ((parsed['buildings'] as List).isNotEmpty) {
+          final firstBuilding = (parsed['buildings'] as List).first;
+          if (firstBuilding is! Map || !firstBuilding.containsKey('data') || !firstBuilding.containsKey('lvl')) {
+            return false;
+          }
+        }
+
+        return true;
+      } catch (e) {
+        return false;
+      }
+    } else {
       return false;
     }
-  }
-
-  Future<Map<String, String>> _loadMapping(String filename) async {
-    final String jsonString = await rootBundle.loadString('assets/clashdata/$filename');
-    final Map<String, dynamic> jsonMap = jsonDecode(jsonString);
-    return jsonMap.map((key, value) => MapEntry(key, value.toString()));
   }
 
   Future<List<Map<String, dynamic>>> _extractUpgradingItems(
@@ -228,40 +205,42 @@ class HomePageState extends State<HomePage> {
     DatabaseHelper dbHelper,
   ) async {
     final List<Map<String, dynamic>> upgradingItems = [];
-      final int timestamp = village['timestamp'];
-      final DateTime exportTime = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000); 
+    final int timestamp = village['timestamp'];
+    final DateTime exportTime = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000); 
+    final String playerName = _getPlayerNameFromTag(village['tag']);
       
-    final sections = [
-      "helpers",
-      "buildings",
-      "traps",
-      "units",
-      "siege_machines",
-      "heroes",
-      "spells",
-      "pets",
-      "buildings2",
-      "traps2",
-      "units2",
-      "heroes2",
-      "boosts",
+    final categories = [
+      'helpers',
+      'buildings',
+      'traps',
+      'units',
+      'siege_machines',
+      'heroes',
+      'spells',
+      'pets',
+      'buildings2',
+      'traps2',
+      'units2',
+      'heroes2',
+      'boosts',
     ];
 
-    for (final section in sections) {
-      if (village.containsKey(section) && village[section] is List) {
-        if (section == "helpers") {
-          for (final item in village[section]) {
-            if (item is Map && item.containsKey("helper_cooldown")) {
-              Duration duration = Duration(seconds: item["helper_cooldown"]);
+    for (final category in categories) {
+      if (village.containsKey(category) && village[category] is List) {
+        //Helper cooldowns are handled separately
+        if (category == 'helpers') {
+          for (final item in village[category]) {
+            if (item is Map && item.containsKey('helper_cooldown')) {
+              Duration duration = Duration(seconds: item['helper_cooldown']);
               final readyDateTime = exportTime.add(duration);
 
               upgradingItems.add({
-                'player': _getPlayerNameFromTag(village['tag']),
+                'player': playerName,
                 'villageType': 'Home Village',
                 'upgradeId': null,
-                'timerName': "Helpers Ready",
+                'timerName': 'Helpers Ready',
                 'nextUpgrade': null,
-                'upgradeType': "Alert",
+                'upgradeType': 'Alert',
                 'readyDateTime': readyDateTime,
               });
 
@@ -269,36 +248,32 @@ class HomePageState extends State<HomePage> {
             }
           }
         } else {
-          for (final item in village[section]) {
-            if (item is Map && item.containsKey("timer")) {
-              final String idStr = item["data"].toString();
+          for (final item in village[category]) {
+            if (item is Map && item.containsKey('timer')) {
+              final String idStr = item['data'].toString();
               final int? upgradeId = int.tryParse(idStr);
-              final int? helperTimerSeconds = item.containsKey("helper_timer") ? item["helper_timer"] : null;
+              final int? helperTimerSeconds = item.containsKey('helper_timer') ? item['helper_timer'] : null;
 
-              final String player = _getPlayerNameFromTag(village['tag']);
-              final String villageType = (section.endsWith("2")) ? 'Builder Base' : 'Home Village';
+              final String villageType = (category.endsWith('2')) ? 'Builder Base' : 'Home Village'; //Dodgy as fuck I know, with Nooni's help we may overhaul how all this shit works
               final String upgradeType;
 
-              if (player == "The Big Fella" && villageType == "Builder Base"){
+              //because fuck builder base right?
+              if (playerName == 'The Big Fella' && villageType == 'Builder Base'){
                 break;
               }
 
-              if (section.contains("buildings") || section.contains("traps") || section.contains("heroes")) {
-                upgradeType = "Building";
-              } else if (section.contains("units") || section.contains("siege_machines") || section.contains("spells")) {
-                upgradeType = "Army";
-              } else if (section.startsWith("pets")) {
-                upgradeType = "Pet";
+              if (category.contains('buildings') || category.contains('traps') || category.contains('heroes')) {
+                upgradeType = 'Building';
+              } else if (category.contains('units') || category.contains('siege_machines') || category.contains('spells')) {
+                upgradeType = 'Army';
+              } else if (category.startsWith('pets')) {
+                upgradeType = 'Pet';
               } else {
-                upgradeType = "Unknown";
+                upgradeType = 'Unknown';
               }
 
-              // Fetch name from database
-              final upgradeName = upgradeId != null
-                  ? await dbHelper.getUpgradeName(upgradeId)
-                  : null;
-
-              Duration duration = Duration(seconds: item["timer"]);
+              final upgradeName = upgradeId != null ? await dbHelper.getUpgradeName(upgradeId) : null;
+              Duration duration = Duration(seconds: item['timer']);
               final readyDateTime = exportTime.add(duration); 
 
               // Get the actual ready time with relevant boosts applied
@@ -312,7 +287,7 @@ class HomePageState extends State<HomePage> {
               );
 
               upgradingItems.add({
-                'player': player,
+                'player': playerName,
                 'villageType': villageType,
                 'upgradeId': upgradeId,
                 'timerName': upgradeName,
@@ -323,20 +298,18 @@ class HomePageState extends State<HomePage> {
             }
           }
         }
-      } else if (village.containsKey(section) && section == "boosts") {
-        if (village[section] is Map && village[section].containsKey("clocktower_cooldown")) {
-          final String player = _getPlayerNameFromTag(village['tag']);
-
-          Duration duration = Duration(seconds: village[section]["clocktower_cooldown"]);
+      } else if (village.containsKey(category) && category == 'boosts') {
+        if (village[category] is Map && village[category].containsKey('clocktower_cooldown')) {
+          Duration duration = Duration(seconds: village[category]['clocktower_cooldown']);
           final readyDateTime = exportTime.add(duration);
 
           upgradingItems.add({
-            'player': player,
-            'villageType': "Builder Base",
+            'player': playerName,
+            'villageType': 'Builder Base',
             'upgradeId': null,
-            'timerName': "Clock Tower Boost Ready",
+            'timerName': 'Clock Tower Boost Ready',
             'nextUpgrade': null,
-            'upgradeType': "Alert",
+            'upgradeType': 'Alert',
             'readyDateTime': readyDateTime,
           });
         }
@@ -354,22 +327,18 @@ class HomePageState extends State<HomePage> {
     Map<String, dynamic> villageData,
     int? helperTimerSeconds,
   ) async {
-    // Await the asynchronous database call
     final String? upgradeType = await dbHelper.getUpgradeTypeFromUpgradeId(upgradeId);
     double remainingSeconds = readyDateTime.difference(effectiveDateTime).inSeconds.toDouble();
-
-    if (remainingSeconds <= 0) {
-      return effectiveDateTime; // Already completed
-    }
-
-    // Hardcoded boosts and their properties (replace with dynamic data if needed)
     final List<Map<String, dynamic>> activeBoosts = [];
 
-    // Extract boosts from the JSON
+    if (remainingSeconds <= 0) {
+      return effectiveDateTime;
+    }
+
     if (villageData.containsKey('boosts') && villageData['boosts'] is Map) {
       final Map<String, dynamic> boosts = villageData['boosts'];
 
-      // Hardcoded boost amounts and their affected types
+      // Hardcoded boost amounts. We'll improve this later, cbf now
       final Map<String, Map<String, dynamic>> boostDetails = {
         'builder_boost': {
           'boostAmount': 10.0,
@@ -389,7 +358,7 @@ class HomePageState extends State<HomePage> {
         'clocktower_boost': {
           'boostAmount': 10.0,
           'affectedVillageType': 'Builder Base',
-          'affectedUpgradeType': null, // Affects all upgrades in Builder Base
+          'affectedUpgradeType': null, // Affects all upgrades so we leave null
         },
         'builder_consumable': {
           'boostAmount': 2.0,
@@ -409,22 +378,21 @@ class HomePageState extends State<HomePage> {
           final boostInfo = boostDetails[boostName]!;
           activeBoosts.add({
             'boostName': boostName,
-            'boostAmount': boostInfo['boostAmount'], // Hardcoded boost amount
-            'startTime': effectiveDateTime, // Assume the boost starts now
-            'endTime': effectiveDateTime.add(Duration(seconds: duration)), // Duration from JSON
-            'affectedVillageType': boostInfo['affectedVillageType'], // Village type
-            'affectedUpgradeType': boostInfo['affectedUpgradeType'], // Upgrade type
+            'boostAmount': boostInfo['boostAmount'],
+            'startTime': effectiveDateTime,
+            'endTime': effectiveDateTime.add(Duration(seconds: duration)),
+            'affectedVillageType': boostInfo['affectedVillageType'],
+            'affectedUpgradeType': boostInfo['affectedUpgradeType'],
           });
         }
       });
     }
 
-    // Add helper boost if `helper_timer` is provided
+    // Add helper boost. Dr. Zoidberg: 'Again with the hardcoding'
     if (helperTimerSeconds != null && helperTimerSeconds > 0) {
-      // Step 2: Determine the relevant helper based on the UpgradeTypeId
       final Map<int, String?> helperUpgradeTypeMapping = {
-        93000000: "Building", // Builder Apprentice -> Building upgrades
-        93000001: "Army", // Lab Assistant -> Army upgrades
+        93000000: 'Building',
+        93000001: 'Army',
       };
 
       int? relevantHelperId;
@@ -434,38 +402,36 @@ class HomePageState extends State<HomePage> {
         }
       });
 
-      // Step 3: Get the helper's level from the JSON data
+      // We grab the level of the helper
       if (relevantHelperId != null && villageData.containsKey('helpers') && villageData['helpers'] is List) {
         final List<dynamic> helpers = villageData['helpers'];
         for (final helper in helpers) {
           if (helper is Map && helper['data'] == relevantHelperId) {
             final int helperLevel = helper['lvl'];
 
-            // Step 4: Add the helper boost to activeBoosts
+            //Now add to the list of active boosts to apply
             activeBoosts.add({
               'boostName': 'Helper Boost',
-              'boostAmount': helperLevel.toDouble() + 1.0, // Use the helper level as the boost amount
+              'boostAmount': helperLevel.toDouble() + 1.0, // Use the helper level as the boost amount, +1 for offset (level 1 is a 2x boost, 2 is 3x etc.)
               'startTime': effectiveDateTime,
               'endTime': effectiveDateTime.add(Duration(seconds: helperTimerSeconds)),
               'affectedVillageType': villageType,
               'affectedUpgradeType': upgradeType,
             });
-            break; // Stop once the relevant helper is found
+            break; // STOP CUNT
           }
         }
       }
     }
 
-    // Step 1: Filter boosts relevant to this upgrade
+    // Filter boosts relevant to this upgrade
     final List<Map<String, dynamic>> relevantBoosts = activeBoosts.where((boost) {
-      final bool villageMatches = boost['affectedVillageType'] == null ||
-          boost['affectedVillageType'] == villageType;
-      final bool upgradeMatches = boost['affectedUpgradeType'] == null ||
-          (upgradeId != null && boost['affectedUpgradeType'] == upgradeType);
+      final bool villageMatches = boost['affectedVillageType'] == null || boost['affectedVillageType'] == villageType;
+      final bool upgradeMatches = boost['affectedUpgradeType'] == null || (upgradeId != null && boost['affectedUpgradeType'] == upgradeType);
       return villageMatches && upgradeMatches;
     }).toList();
 
-    // Step 2: Create a timeline of boost segments
+    // Humble brag warning, here is where we get clever with it. We make a 'timeline' of the boosts which accurately track stacked boosts for their respective time period
     final List<Map<String, dynamic>> segments = [];
     final List<DateTime> boundaries = relevantBoosts
         .expand((boost) => [boost['startTime'] as DateTime, boost['endTime'] as DateTime])
@@ -478,7 +444,7 @@ class HomePageState extends State<HomePage> {
       final segmentEnd = boundaries[i + 1];
 
       // Calculate the total boost for this segment
-      double totalBoost = 0.0; // Default is no boost
+      double totalBoost = 0.0; // Start at 0 obviously
       for (final boost in relevantBoosts) {
         if (segmentStart.isBefore(boost['endTime']) &&
             segmentEnd.isAfter(boost['startTime'])) {
@@ -493,7 +459,7 @@ class HomePageState extends State<HomePage> {
       });
     }
 
-    // Step 3: Process each segment to calculate the effective upgrade time
+    // Now process each segment to calculate the effective upgrade time
     DateTime effectiveTime = effectiveDateTime;
 
     for (final segment in segments) {
@@ -512,18 +478,17 @@ class HomePageState extends State<HomePage> {
 
       final double effectiveSegmentDuration = segmentDuration * boostAmount;
 
+      // If this segment completes the upgrade then we have our result, otherwise subtract the effective time and move on to next segment
       if (effectiveSegmentDuration >= remainingSeconds) {
-        // If this segment completes the upgrade
         effectiveTime = effectiveTime.add(Duration(seconds: (remainingSeconds / boostAmount).ceil()));
         remainingSeconds = 0;
-      } else {
-        // Otherwise, subtract the effective time and move to the next segment
+      } else { // Otherwise, subtract the effective time and move to the next segment
         effectiveTime = segmentEnd;
         remainingSeconds -= effectiveSegmentDuration;
       }
     }
 
-    // Step 4: If there's still time remaining, add it without boosts
+    // Any left over time is added as per normal
     if (remainingSeconds > 0) {
       effectiveTime = effectiveTime.add(Duration(seconds: remainingSeconds.ceil()));
     }
@@ -531,21 +496,19 @@ class HomePageState extends State<HomePage> {
     return effectiveTime;
   }
 
+  // TODO: make this customisable
   Color _getUpgradeTimeColor(DateTime time) {
     final hour = time.hour;
     if (time.isBefore(DateTime.now())) {
-      return Colors.green; // Already done
-    }
-
-    // Determine the color based on the target hour
-    if (hour >= 23 || hour < 6) {
-      return Colors.red; // Between 11 PM and 6 AM
+      return Colors.green; // Already done, trumps all following checks
+    } else if (hour >= 23 || hour < 6) {
+      return Colors.red; // 11 PM and 6 AM
     } else if (hour >= 6 && hour < 7) {
-      return Colors.orange; // Between 6 AM and 7 AM
+      return Colors.orange; // 6 AM and 7 AM
     } else if (hour >= 7 && hour < 8) {
-      return Colors.yellow; // Between 7 AM and 8 AM
+      return Colors.yellow; // 7 AM and 8 AM
     } else {
-      return Colors.white; // Otherwise (anything else)
+      return Colors.white;
     }
   }
 
@@ -555,14 +518,12 @@ class HomePageState extends State<HomePage> {
     dbHelper = DatabaseHelper();
     _requestNotificationPermission();
     _loadTimers(); // Initial load of timers
-    _startTimer();
+    _startTimer(); // Keep them refreshing
   }
 
-  // Method to load timers from the database
   Future<void> _loadTimers() async {
     final loadedTimers = await dbHelper.getTimers();
 
-    // Apply filtering based on selected filters
     final filteredTimers = loadedTimers.where((timer) {
       bool matchesPlayer = selectedPlayers.isEmpty || selectedPlayers.contains(timer.player);
       bool matchesVillageType = selectedVillageTypes.isEmpty || selectedVillageTypes.contains(timer.villageType);
@@ -592,20 +553,20 @@ class HomePageState extends State<HomePage> {
     int seconds = duration.inSeconds.remainder(60);
 
     if (duration.isNegative || duration == Duration.zero) {
-      return "Done!";
+      return 'Done!';
     } else {
-      if (displayMode == "Timer") {
+      if (displayMode == 'Timer') {
         if (days == 0) {
           if (hours == 0) {
-            return "${minutes}m ${seconds}s";
+            return '${minutes}m ${seconds}s';
           } else {
-            return "${hours}h ${minutes}m";
+            return '${hours}h ${minutes}m';
           }
         } else {
-          return "${days}d ${hours}h ${minutes}m";
+          return '${days}d ${hours}h ${minutes}m';
         }
       } 
-      else if (displayMode == "Date") {
+      else if (displayMode == 'Date') {
         final DateTime now = DateTime.now();
         final DateTime expiryDate = now.add(duration);
         final timeFormat = DateFormat('h:mm a'); // 12-hour format with AM/PM
@@ -617,27 +578,26 @@ class HomePageState extends State<HomePage> {
         if (expiryDateOnly == todayDate) {
           return timeFormat.format(expiryDate);
         } else if (expiryDateOnly == tomorrowDate) {
-          return "Tomorrow - ${timeFormat.format(expiryDate)}";
+          return 'Tomorrow - ${timeFormat.format(expiryDate)}';
         } else {
           final dateFormat = DateFormat('E, d MMM');
-          return "${dateFormat.format(expiryDate)} ${timeFormat.format(expiryDate)}";
+          return '${dateFormat.format(expiryDate)} ${timeFormat.format(expiryDate)}';
         }
       } 
       else {
-        return "";
+        return '';
       }
     }
   }
 
-  // Show Player filter dialog
   Future<void> _showFilterDialog(BuildContext context) async {
     return showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF212121), // Dark background
+          backgroundColor: const Color(0xFF212121),
           title: const Text(
-            "Filters",
+            'Filters',
             style: TextStyle(color: Colors.greenAccent, fontSize: 16),
           ),
           content: StatefulBuilder(
@@ -646,8 +606,7 @@ class HomePageState extends State<HomePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Player Filters
-                    const Text("Players", style: TextStyle(color: Colors.white)),
+                    const Text('Players', style: TextStyle(color: Colors.white)),
                     ...players.map((player) {
                       return CheckboxListTile(
                         title: Text(player, style: const TextStyle(color: Colors.white)),
@@ -664,10 +623,9 @@ class HomePageState extends State<HomePage> {
                           });
                         },
                       );
-                    }).toList(),
+                    }),
                     const Divider(color: Colors.white70),
-                    // Village Type Filters
-                    const Text("Village Types", style: TextStyle(color: Colors.white)),
+                    const Text('Village Types', style: TextStyle(color: Colors.white)),
                     ...villageTypes.map((villageType) {
                       return CheckboxListTile(
                         title: Text(villageType, style: const TextStyle(color: Colors.white)),
@@ -684,27 +642,26 @@ class HomePageState extends State<HomePage> {
                           });
                         },
                       );
-                    }).toList(),
+                    }),
                     const Divider(color: Colors.white70),
-                    // Village Type Filters
-                    const Text("Upgrade Types", style: TextStyle(color: Colors.white)),
-                    ...upgradeTypes.map((upgradType) {
+                    const Text('Upgrade Types', style: TextStyle(color: Colors.white)),
+                    ...upgradeTypes.map((upgradeType) {
                       return CheckboxListTile(
-                        title: Text(upgradType, style: const TextStyle(color: Colors.white)),
-                        value: selectedUpgradeTypes.contains(upgradType),
+                        title: Text(upgradeType, style: const TextStyle(color: Colors.white)),
+                        value: selectedUpgradeTypes.contains(upgradeType),
                         onChanged: (bool? selected) {
                           setState(() {
                             if (selected != null) {
                               if (selected) {
-                                selectedUpgradeTypes.add(upgradType);
+                                selectedUpgradeTypes.add(upgradeType);
                               } else {
-                                selectedUpgradeTypes.remove(upgradType);
+                                selectedUpgradeTypes.remove(upgradeType);
                               }
                             }
                           });
                         },
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               );
@@ -713,16 +670,16 @@ class HomePageState extends State<HomePage> {
           actions: [
             TextButton(
               onPressed: () {
-                _loadTimers(); // Reload timers with applied filters
+                _loadTimers();
                 Navigator.pop(context);
               },
-              child: const Text("Apply", style: TextStyle(color: Colors.green)),
+              child: const Text('Apply', style: TextStyle(color: Colors.green)),
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Close the dialog without applying filters
+                Navigator.pop(context);
               },
-              child: const Text("Cancel", style: TextStyle(color: Colors.red)),
+              child: const Text('Cancel', style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -736,27 +693,27 @@ class HomePageState extends State<HomePage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            backgroundColor: const Color(0xFF212121), // Dark grey
+            backgroundColor: const Color(0xFF212121), 
             title: const Text(
-              "Delete Timer?",
-              style: TextStyle(color: Color(0xFFF5F5F5)), // White
+              'Delete Timer?',
+              style: TextStyle(color: Color(0xFFF5F5F5)), 
             ),
             content: const Text(
-              "Are you sure you want to delete this timer?",
-              style: TextStyle(color: Color(0xFFF5F5F5)), // White
+              'Are you sure you want to delete this timer?',
+              style: TextStyle(color: Color(0xFFF5F5F5)), 
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text("Cancel", style: TextStyle(color: Color(0xFFBDBDBD))), // Medium grey
+                child: const Text('Cancel', style: TextStyle(color: Color(0xFFBDBDBD))), 
               ),
               TextButton(
                 onPressed: () {
                   dbHelper.deleteTimer(timerId);
-                  _loadTimers(); // Reload timers after deletion
+                  _loadTimers();
                   Navigator.of(context).pop(true);
                 },
-                child: const Text("Delete", style: TextStyle(color: Colors.red)),
+                child: const Text('Delete', style: TextStyle(color: Colors.red)),
               ),
             ],
           );
@@ -771,9 +728,9 @@ class HomePageState extends State<HomePage> {
 
   Color _getVillageIconColour(String? villageType) {
     switch (villageType) {
-      case "Home Village":
+      case 'Home Village':
         return Colors.lightGreenAccent;
-      case "Builder Base":
+      case 'Builder Base':
         return Colors.blueGrey;
       default:
         return Colors.grey;
@@ -782,13 +739,13 @@ class HomePageState extends State<HomePage> {
 
   Color _getUpgradeColour(String? upgradeType) {
     switch (upgradeType) {
-      case "Building":
+      case 'Building':
         return Colors.amber;
-      case "Army":
+      case 'Army':
         return Colors.purple;
-      case "Pet":
+      case 'Pet':
         return Colors.deepPurple;
-      case "Alert":
+      case 'Alert':
         return Colors.lightBlueAccent;
       default:
         return Colors.grey;
@@ -797,7 +754,7 @@ class HomePageState extends State<HomePage> {
 
   Color _getTimerFontColour(String? upgradeType) {
     switch (upgradeType) {
-      case "Alert":
+      case 'Alert':
         return Colors.blueGrey;
       default:
         return Colors.white;
@@ -814,13 +771,11 @@ class HomePageState extends State<HomePage> {
   }
 
   Color getPlayerColour(String player) {
-    if (player == "The Wolf") {
+    if (player == 'The Wolf' || player == 'The Big Fella') {
       return Colors.green;
-    } else if (player == "Splyce") {
+    } else if (player == 'Splyce') {
       return Colors.blueAccent;
-    } else if (player == "The Big Fella") { 
-      return Colors.green;
-    } else if (player == "P.L.U.C.K.") {
+    } else if (player == 'P.L.U.C.K.') {
       return Colors.deepOrangeAccent;
     } else {
       return Colors.grey;
@@ -837,14 +792,14 @@ class HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Timers"),
+        title: const Text('Timers'),
         actions: [
           // Toggle for Timer/Date View
           IconButton(
             icon: const Icon(Icons.timer),
             onPressed: () async {
               setState(() {
-                displayMode = displayMode == "Timer" ? "Date" : "Timer";
+                displayMode = displayMode == 'Timer' ? 'Date' : 'Timer'; // god this line is elegant
               });
             },
           ),
@@ -856,7 +811,7 @@ class HomePageState extends State<HomePage> {
           // Clear Filters Button
           IconButton(
             icon: const Icon(Icons.clear),
-            tooltip: "Clear Filters",
+            tooltip: 'Clear Filters',
             onPressed: _resetFilters,
           ),
         ],
@@ -868,25 +823,22 @@ class HomePageState extends State<HomePage> {
 
           // Apply player and village type filters
           if (selectedPlayers.isNotEmpty && !selectedPlayers.contains(timer.player)) {
-            return const SizedBox.shrink(); // Skip this item if it doesn't match the player filter
+            return const SizedBox.shrink();
           }
           if (selectedVillageTypes.isNotEmpty && !selectedVillageTypes.contains(timer.villageType)) {
-            return const SizedBox.shrink(); // Skip this item if it doesn't match the village type filter
+            return const SizedBox.shrink();
           }
 
-          // Extract data for the current item
           final String player = timer.player;
           final String? villageType = timer.villageType;
           final String? upgradeType = timer.upgradeType;
           final String timerName = timer.timerName;
           final DateTime readyDateTime = timer.readyDateTime;
 
-          // Determine icons or indicators for village and upgrade type
-          final IconData villageIcon = villageType == 'Builder Base'
-              ? Icons.construction // Example icon for Builder Base
-              : Icons.home; // Example icon for Home Village
-
+          final IconData villageIcon = villageType == 'Builder Base' ? Icons.construction : Icons.home;
+          final String timeDisplay = _formatDuration(readyDateTime.difference(DateTime.now()));
           final IconData upgradeIcon;
+
           switch (upgradeType) {
             case 'Army':
               upgradeIcon = Icons.shield;
@@ -903,8 +855,6 @@ class HomePageState extends State<HomePage> {
             default:
               upgradeIcon = Icons.question_mark;
           }
-
-          final String timeDisplay = _formatDuration(readyDateTime.difference(DateTime.now()));
 
           return GestureDetector(
             onLongPress: () async {
@@ -954,21 +904,19 @@ class HomePageState extends State<HomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          String test = _formatDuration(const Duration(hours: 24));
-
           final bool confirmed = await _uploadFromClipboard();
           if (confirmed) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Data uploaded successfully - good job kiddo")),
+              const SnackBar(content: Text('Data uploaded successfully - good job kiddo')),
             );
           } else {    
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Data is not in the expected format - copy the shit again mate.")),
+              const SnackBar(content: Text('Data is not in the expected format - copy the shit again mate.')),
             );
           }
         },
+        tooltip: 'Upload Data',
         child: const Icon(Icons.upload_file),
-        tooltip: "Upload Data",
       ),
     );
   }

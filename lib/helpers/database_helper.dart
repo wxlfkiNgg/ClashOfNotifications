@@ -249,7 +249,6 @@ class DatabaseHelper {
     timer.timerId = await db.insert('timers', timer.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace);
     
-    // Schedule notification after inserting
     await _scheduleNotification(timer);
   }
 
@@ -309,22 +308,10 @@ class DatabaseHelper {
     }
     return null;
   }
-
-
-  Future<void> updateTimer(TimerModel timer) async {
-    final db = await database;
-    await db.update(
-      'timers',
-      timer.toMap(),
-      where: 'id = ?',
-      whereArgs: [timer.timerId],
-    );
-  }
   
   Future<String?> getUpgradeTypeFromUpgradeId(int? upgradeId) async {
     final db = await database;
 
-    // Query the 'upgrades' table to get the UpgradeTypeId for the given UpgradeId
     final List<Map<String, dynamic>> result = await db.query(
       tableNameUpgrades,
       columns: ['UpgradeType'], // Assuming 'UpgradeType' is the column name
@@ -336,9 +323,9 @@ class DatabaseHelper {
     if (result.isNotEmpty) {
       final String upgradeType = result.first['UpgradeType'] as String;
       return upgradeType;
+    } else {
+      return null;
     }
-
-    return null; // Return null if no matching UpgradeId is found
   }
 
   Future<void> _scheduleNotification(TimerModel timer) async {
@@ -354,6 +341,7 @@ class DatabaseHelper {
       upgradeMessage = '${timer.timerName} has finished upgrading.';
     }
     
+    // These villages aren't important so no sound is necessary
     if (timer.player.contains('Bruce') || timer.player == 'Joe') {
       quietNotification = true;
     }
