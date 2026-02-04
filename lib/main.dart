@@ -186,7 +186,7 @@ class HomePageState extends State<HomePage> {
         // At this point we are being pedantic but we want to make sure the buildings field at least has an entry with the required fields
         if ((parsed['buildings'] as List).isNotEmpty) {
           final firstBuilding = (parsed['buildings'] as List).first;
-          if (firstBuilding is! Map || !firstBuilding.containsKey('data') || !firstBuilding.containsKey('lvl')) {
+          if (firstBuilding is! Map || !firstBuilding.containsKey('data')) {
             return false;
           }
         }
@@ -211,6 +211,7 @@ class HomePageState extends State<HomePage> {
       
     final categories = [
       'helpers',
+      'guardians',
       'buildings',
       'traps',
       'units',
@@ -262,7 +263,7 @@ class HomePageState extends State<HomePage> {
                 break;
               }
 
-              if (category.contains('buildings') || category.contains('traps') || category.contains('heroes')) {
+              if (category.contains('buildings') || category.contains('traps') || category.contains('heroes') || category.contains('guardians')) {
                 upgradeType = 'Building';
               } else if (category.contains('units') || category.contains('siege_machines') || category.contains('spells')) {
                 upgradeType = 'Army';
