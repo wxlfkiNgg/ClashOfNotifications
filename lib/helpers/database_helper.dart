@@ -207,6 +207,7 @@ class DatabaseHelper {
           {'id': 26000053, 'name': 'Recall Spell', 'type': 'Army'},
           {'id': 26000070, 'name': 'Overgrowth Spell', 'type': 'Army'},
           {'id': 26000098, 'name': 'Revive Spell', 'type': 'Army'},
+          {'id': 26000109, 'name': 'Ice Block Spell', 'type': 'Army'},
           {'id': 26000120, 'name': 'Totem Spell', 'type': 'Army'},
           {'id': 28000000, 'name': 'Barbarian King', 'type': 'Building'},
           {'id': 28000001, 'name': 'Archer Queen', 'type': 'Building'},
@@ -215,6 +216,7 @@ class DatabaseHelper {
           {'id': 28000004, 'name': 'Royal Champion', 'type': 'Building'},
           {'id': 28000005, 'name': 'Battle Copter', 'type': 'Building'},
           {'id': 28000006, 'name': 'Minion Prince', 'type': 'Building'},
+          {'id': 28000007, 'name': 'Dragon Duke', 'type': 'Building'},
           {'id': 73000000, 'name': 'L.A.S.S.I.', 'type': 'Pet'},
           {'id': 73000001, 'name': 'Mighty Yak', 'type': 'Pet'},
           {'id': 73000002, 'name': 'Electro Owl', 'type': 'Pet'},
@@ -282,12 +284,6 @@ class DatabaseHelper {
 
     for (final timer in timers) {
       final int? id = timer['TimerId'] as int?;
-      final String? timerName = timer['TimerName'] as String?;
-
-      // Don't delete timers named 'Dragon Duke'
-      if (timerName == 'Dragon Duke') {
-        continue;
-      }
 
       if (id != null) {
         await notificationsPlugin.cancel(id);

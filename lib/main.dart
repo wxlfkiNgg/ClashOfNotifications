@@ -613,56 +613,21 @@ class HomePageState extends State<HomePage> {
                   children: [
                     const Text('Players', style: TextStyle(color: Colors.white)),
                     ...players.map((player) {
-                      return CheckboxListTile(
+                      return ListTile(
                         title: Text(player, style: const TextStyle(color: Colors.white)),
-                        value: selectedPlayers.contains(player),
-                        onChanged: (bool? selected) {
+                        selected: selectedPlayers.contains(player),
+                        onTap: () {
                           setState(() {
-                            if (selected != null) {
-                              if (selected) {
-                                selectedPlayers.add(player);
-                              } else {
-                                selectedPlayers.remove(player);
-                              }
-                            }
-                          });
-                        },
-                      );
-                    }),
-                    const Divider(color: Colors.white70),
-                    const Text('Village Types', style: TextStyle(color: Colors.white)),
-                    ...villageTypes.map((villageType) {
-                      return CheckboxListTile(
-                        title: Text(villageType, style: const TextStyle(color: Colors.white)),
-                        value: selectedVillageTypes.contains(villageType),
-                        onChanged: (bool? selected) {
-                          setState(() {
-                            if (selected != null) {
-                              if (selected) {
-                                selectedVillageTypes.add(villageType);
-                              } else {
-                                selectedVillageTypes.remove(villageType);
-                              }
-                            }
-                          });
-                        },
-                      );
-                    }),
-                    const Divider(color: Colors.white70),
-                    const Text('Upgrade Types', style: TextStyle(color: Colors.white)),
-                    ...upgradeTypes.map((upgradeType) {
-                      return CheckboxListTile(
-                        title: Text(upgradeType, style: const TextStyle(color: Colors.white)),
-                        value: selectedUpgradeTypes.contains(upgradeType),
-                        onChanged: (bool? selected) {
-                          setState(() {
-                            if (selected != null) {
-                              if (selected) {
-                                selectedUpgradeTypes.add(upgradeType);
-                              } else {
-                                selectedUpgradeTypes.remove(upgradeType);
-                              }
-                            }
+                            selectedPlayers.clear();
+                            selectedVillageTypes.clear();
+                            selectedUpgradeTypes.clear();
+
+                            selectedPlayers.add(player);
+                            selectedVillageTypes.add('Home Village');
+                            selectedUpgradeTypes.add('Building');
+
+                            _loadTimers();
+                            Navigator.pop(context);
                           });
                         },
                       );
@@ -685,168 +650,6 @@ class HomePageState extends State<HomePage> {
                 Navigator.pop(context);
               },
               child: const Text('Cancel', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _showAddTimerDialog(BuildContext context) async {
-    String selectedPlayer = players.first;
-    String selectedVillageType = "Home Village";
-    String selectedUpgradeType = "Building";
-    String timerName = 'Dragon Duke';
-    int days = 0;
-    int hours = 0;
-    int minutes = 0;
-
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF212121),
-          title: const Text(
-            'Add Custom Timer',
-            style: TextStyle(color: Colors.greenAccent, fontSize: 16),
-          ),
-          content: StatefulBuilder(
-            builder: (BuildContext context, StateSetter setState) {
-              return SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Player', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    DropdownButton<String>(
-                      value: selectedPlayer,
-                      dropdownColor: Colors.grey[800],
-                      items: players.map((String player) {
-                        return DropdownMenuItem<String>(
-                          value: player,
-                          child: Text(player, style: const TextStyle(color: Colors.white)),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          if (newValue != null) {
-                            selectedPlayer = newValue;
-                          }
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('Duration', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            children: [
-                              const Text('Days', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                              TextField(
-                                style: const TextStyle(color: Colors.white),
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.grey[800],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.grey[700]!),
-                                  ),
-                                ),
-                                onChanged: (value) {
-                                  days = int.tryParse(value) ?? 0;
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            children: [
-                              const Text('Hours', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                              TextField(
-                                style: const TextStyle(color: Colors.white),
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.grey[800],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.grey[700]!),
-                                  ),
-                                ),
-                                onChanged: (value) {
-                                  hours = int.tryParse(value) ?? 0;
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            children: [
-                              const Text('Minutes', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                              TextField(
-                                style: const TextStyle(color: Colors.white),
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.grey[800],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.grey[700]!),
-                                  ),
-                                ),
-                                onChanged: (value) {
-                                  minutes = int.tryParse(value) ?? 0;
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Cancel', style: TextStyle(color: Colors.red)),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (timerName.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a timer name')),
-                  );
-                  return;
-                }
-
-                final duration = Duration(days: days, hours: hours, minutes: minutes);
-                final readyDateTime = DateTime.now().add(duration);
-
-                final newTimer = TimerModel(
-                  player: selectedPlayer,
-                  villageType: selectedVillageType,
-                  upgradeId: null,
-                  timerName: timerName,
-                  upgradeType: selectedUpgradeType,
-                  readyDateTime: readyDateTime,
-                );
-
-                await dbHelper.insertTimer(newTimer);
-                _loadTimers();
-                Navigator.pop(context);
-              },
-              child: const Text('Submit', style: TextStyle(color: Colors.green)),
             ),
           ],
         );
@@ -965,11 +768,6 @@ class HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('Timers'),
         actions: [
-          // Add Custom Timer
-          IconButton(
-            icon: const Icon(Icons.no_flash),
-            onPressed: () => _showAddTimerDialog(context),
-          ),
           // Toggle for Timer/Date View
           IconButton(
             icon: const Icon(Icons.timer),
