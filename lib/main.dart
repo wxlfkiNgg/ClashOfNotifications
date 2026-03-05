@@ -152,6 +152,10 @@ class HomePageState extends State<HomePage> {
         return 'The Big Fella';
       case '#G9C8VL9JG':
         return 'Sheepashoo';
+      case '#GJ9UCCG8J':
+        return 'Joe';
+      case '#GURVPVUU9':
+        return 'Bruce 6';
       default:
         return 'Unknown: $tag';
     }
@@ -688,6 +692,168 @@ class HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _showAddTimerDialog(BuildContext context) async {
+    String selectedPlayer = players.first;
+    String selectedVillageType = "Home Village";
+    String selectedUpgradeType = "Building";
+    String timerName = 'Dragon Duke';
+    int days = 0;
+    int hours = 0;
+    int minutes = 0;
+
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF212121),
+          title: const Text(
+            'Add Custom Timer',
+            style: TextStyle(color: Colors.greenAccent, fontSize: 16),
+          ),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Player', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    DropdownButton<String>(
+                      value: selectedPlayer,
+                      dropdownColor: Colors.grey[800],
+                      items: players.map((String player) {
+                        return DropdownMenuItem<String>(
+                          value: player,
+                          child: Text(player, style: const TextStyle(color: Colors.white)),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          if (newValue != null) {
+                            selectedPlayer = newValue;
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Duration', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('Days', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                              TextField(
+                                style: const TextStyle(color: Colors.white),
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Colors.grey[800],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.grey[700]!),
+                                  ),
+                                ),
+                                onChanged: (value) {
+                                  days = int.tryParse(value) ?? 0;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('Hours', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                              TextField(
+                                style: const TextStyle(color: Colors.white),
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Colors.grey[800],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.grey[700]!),
+                                  ),
+                                ),
+                                onChanged: (value) {
+                                  hours = int.tryParse(value) ?? 0;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('Minutes', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                              TextField(
+                                style: const TextStyle(color: Colors.white),
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Colors.grey[800],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.grey[700]!),
+                                  ),
+                                ),
+                                onChanged: (value) {
+                                  minutes = int.tryParse(value) ?? 0;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (timerName.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a timer name')),
+                  );
+                  return;
+                }
+
+                final duration = Duration(days: days, hours: hours, minutes: minutes);
+                final readyDateTime = DateTime.now().add(duration);
+
+                final newTimer = TimerModel(
+                  player: selectedPlayer,
+                  villageType: selectedVillageType,
+                  upgradeId: null,
+                  timerName: timerName,
+                  upgradeType: selectedUpgradeType,
+                  readyDateTime: readyDateTime,
+                );
+
+                await dbHelper.insertTimer(newTimer);
+                _loadTimers();
+                Navigator.pop(context);
+              },
+              child: const Text('Submit', style: TextStyle(color: Colors.green)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<bool> _confirmDelete(BuildContext context, int? timerId) async {
     if (timerId != null) {
       return await showDialog(
@@ -778,6 +944,10 @@ class HomePageState extends State<HomePage> {
       return Colors.blueAccent;
     } else if (player == 'P.L.U.C.K.') {
       return Colors.deepOrangeAccent;
+    } else if (player == 'Bruce 6') {
+      return Colors.greenAccent;
+    } else if (player == 'Joe') {
+      return Colors.purple;
     } else {
       return Colors.grey;
     }
@@ -795,6 +965,11 @@ class HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('Timers'),
         actions: [
+          // Add Custom Timer
+          IconButton(
+            icon: const Icon(Icons.no_flash),
+            onPressed: () => _showAddTimerDialog(context),
+          ),
           // Toggle for Timer/Date View
           IconButton(
             icon: const Icon(Icons.timer),

@@ -282,6 +282,12 @@ class DatabaseHelper {
 
     for (final timer in timers) {
       final int? id = timer['TimerId'] as int?;
+      final String? timerName = timer['TimerName'] as String?;
+
+      // Don't delete timers named 'Dragon Duke'
+      if (timerName == 'Dragon Duke') {
+        continue;
+      }
 
       if (id != null) {
         await notificationsPlugin.cancel(id);
