@@ -762,8 +762,42 @@ class HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  Map<String, List<TimerModel>> _groupHelpersByPlayer(List<TimerModel> helperTimers) {
+    final Map<String, List<TimerModel>> grouped = {};
+    for (final timer in helperTimers) {
+      final key = timer.player;
+      if (!grouped.containsKey(key)) {
+        grouped[key] = [];
+      }
+      grouped[key]!.add(timer);
+    }
+    // Sort within each group: helpers first, then others
+    grouped.forEach((key, list) {
+      list.sort((a, b) {
+        if (a.timerName == 'Helpers Ready' && b.timerName != 'Helpers Ready') return -1;
+        if (a.timerName != 'Helpers Ready' && b.timerName == 'Helpers Ready') return 1;
+        return 0;
+      });
+    });
+    return grouped;
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Separate helper timers from regular timers
+    List<TimerModel> helperTimers = timers.where((t) => t.upgradeType == 'Alert').toList();
+    List<TimerModel> regularTimers = timers.where((t) => t.upgradeType != 'Alert').toList();
+
+    // Apply filters to both lists
+    if (selectedPlayers.isNotEmpty) {
+      helperTimers = helperTimers.where((t) => selectedPlayers.contains(t.player)).toList();
+      regularTimers = regularTimers.where((t) => selectedPlayers.contains(t.player)).toList();
+    }
+    if (selectedVillageTypes.isNotEmpty) {
+      helperTimers = helperTimers.where((t) => selectedVillageTypes.contains(t.villageType)).toList();
+      regularTimers = regularTimers.where((t) => selectedVillageTypes.contains(t.villageType)).toList();
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Timers'),
@@ -790,91 +824,162 @@ class HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: ListView.builder(
-        itemCount: timers.length,
-        itemBuilder: (context, index) {
-          final timer = timers[index];
+      body: Column(
+        children: [
+          if (helperTimers.isNotEmpty)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 150),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                shrinkWrap: true,
+                itemCount: _groupHelpersByPlayer(helperTimers).length,
+                itemBuilder: (context, index) {
+                  final groupKey = _groupHelpersByPlayer(helperTimers).keys.elementAt(index);
+                  final groupTimers = _groupHelpersByPlayer(helperTimers)[groupKey]!;
+                  return Container(
+                    width: 90,
+                    margin: const EdgeInsets.all(4),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          groupKey, //player name
+                          style: TextStyle(
+                            color: getPlayerColour(groupKey),
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
 
-          // Apply player and village type filters
-          if (selectedPlayers.isNotEmpty && !selectedPlayers.contains(timer.player)) {
-            return const SizedBox.shrink();
-          }
-          if (selectedVillageTypes.isNotEmpty && !selectedVillageTypes.contains(timer.villageType)) {
-            return const SizedBox.shrink();
-          }
+                        const SizedBox(height: 4),
 
-          final String player = timer.player;
-          final String? villageType = timer.villageType;
-          final String? upgradeType = timer.upgradeType;
-          final String timerName = timer.timerName;
-          final DateTime readyDateTime = timer.readyDateTime;
+                        ...groupTimers.map((timer) {
+                          final String timeDisplay =
+                              _formatDuration(timer.readyDateTime.difference(DateTime.now()));
+                          final IconData alertIcon = timer.timerName == 'Helpers Ready'
+                              ? Icons.person_outline
+                              : Icons.timer;
 
-          final IconData villageIcon = villageType == 'Builder Base' ? Icons.construction : Icons.home;
-          final String timeDisplay = _formatDuration(readyDateTime.difference(DateTime.now()));
-          final IconData upgradeIcon;
-
-          switch (upgradeType) {
-            case 'Army':
-              upgradeIcon = Icons.shield;
-              break;
-            case 'Building':
-              upgradeIcon = Icons.build;
-              break;
-            case 'Pet':
-              upgradeIcon = Icons.pets;
-              break;
-            case 'Alert':
-              upgradeIcon = Icons.info;
-              break;
-            default:
-              upgradeIcon = Icons.question_mark;
-          }
-
-          return GestureDetector(
-            onLongPress: () async {
-             await _confirmDelete(context, timer.timerId);
-            },
-            child: Card(
-              color: const Color(0xFF212121),
-              margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 1.0),
-              child: ListTile(
-                leading: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(villageIcon, color: _getVillageIconColour(villageType)),
-                    const SizedBox(height: 8.0),
-                    Icon(upgradeIcon, color: _getUpgradeColour(upgradeType)),
-                  ],
-                ),
-                title: Text(
-                  player,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: getPlayerColour(player),
-                  ),
-                ),
-                subtitle: Text(
-                 timerName,
-                 style: TextStyle(color: _getTimerFontColour(upgradeType)),
-                ),
-                trailing: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    timeDisplay,
-                    style: TextStyle(
-                      color: _getUpgradeTimeColor(readyDateTime),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                          return GestureDetector(
+                            onLongPress: () async {
+                              await _confirmDelete(context, timer.timerId);
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 2),
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF212121),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(alertIcon, color: _getVillageIconColour(timer.villageType), size: 20),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    timeDisplay,
+                                    style: TextStyle(
+                                      color: _getUpgradeTimeColor(timer.readyDateTime),
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
-          );
-        },
+          Expanded(
+            child: ListView.builder(
+              itemCount: regularTimers.length,
+              itemBuilder: (context, index) {
+                final timer = regularTimers[index];
+
+                final String player = timer.player;
+                final String? villageType = timer.villageType;
+                final String? upgradeType = timer.upgradeType;
+                final String timerName = timer.timerName;
+                final DateTime readyDateTime = timer.readyDateTime;
+
+                final IconData villageIcon = villageType == 'Builder Base' ? Icons.construction : Icons.home;
+                final String timeDisplay = _formatDuration(readyDateTime.difference(DateTime.now()));
+                final IconData upgradeIcon;
+
+                switch (upgradeType) {
+                  case 'Army':
+                    upgradeIcon = Icons.shield;
+                    break;
+                  case 'Building':
+                    upgradeIcon = Icons.build;
+                    break;
+                  case 'Pet':
+                    upgradeIcon = Icons.pets;
+                    break;
+                  case 'Alert':
+                    upgradeIcon = Icons.info;
+                    break;
+                  default:
+                    upgradeIcon = Icons.question_mark;
+                }
+
+                return GestureDetector(
+                  onLongPress: () async {
+                    await _confirmDelete(context, timer.timerId);
+                  },
+                  child: Card(
+                    color: const Color(0xFF212121),
+                    margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 1.0),
+                    child: ListTile(
+                      leading: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(villageIcon, color: _getVillageIconColour(villageType)),
+                          const SizedBox(height: 8.0),
+                          Icon(upgradeIcon, color: _getUpgradeColour(upgradeType)),
+                        ],
+                      ),
+                      title: Text(
+                        player,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: getPlayerColour(player),
+                        ),
+                      ),
+                      subtitle: Text(
+                        timerName,
+                        style: TextStyle(color: _getTimerFontColour(upgradeType)),
+                      ),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          timeDisplay,
+                          style: TextStyle(
+                            color: _getUpgradeTimeColor(readyDateTime),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
