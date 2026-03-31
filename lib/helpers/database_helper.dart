@@ -228,6 +228,7 @@ class DatabaseHelper {
           {'id': 73000010, 'name': 'Spirit Fox', 'type': 'Pet'},
           {'id': 73000011, 'name': 'Angry Jelly', 'type': 'Pet'},
           {'id': 73000016, 'name': 'Sneezy', 'type': 'Pet'},
+          {'id': 73000017, 'name': 'Greedy Raven', 'type': 'Pet'},
           {'id': 107000000, 'name': 'Guardian (Longshot)', 'type': 'Building'},
           {'id': 107000001, 'name': 'Guardian (Smasher)', 'type': 'Building'},
         ];
