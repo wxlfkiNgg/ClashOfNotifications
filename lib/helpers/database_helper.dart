@@ -107,6 +107,7 @@ class DatabaseHelper {
           {'id': 1000050, 'name': 'Firecrackers', 'type': 'Building'},
           {'id': 1000051, 'name': 'Guard Post', 'type': 'Building'},
           {'id': 1000052, 'name': 'Mega Tesla', 'type': 'Building'},
+          {'id': 1000053, 'name': 'Battle Machine Altar', 'type': 'Building'},
           {'id': 1000054, 'name': 'Air Bombs', 'type': 'Building'},
           {'id': 1000055, 'name': 'Crusher', 'type': 'Building'},
           {'id': 1000056, 'name': 'Roaster', 'type': 'Building'},
