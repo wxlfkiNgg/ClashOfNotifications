@@ -5,6 +5,7 @@ class TimerModel {
   int? upgradeId;
   String timerName;
   String? upgradeType;
+  int? upgradeLevel;
   DateTime readyDateTime;
 
   TimerModel({
@@ -14,6 +15,7 @@ class TimerModel {
     required this.upgradeId,
     required this.timerName,
     required this.upgradeType,
+    required this.upgradeLevel,
     required this.readyDateTime,
   });
 
@@ -25,6 +27,7 @@ class TimerModel {
       'upgradeId': upgradeId,
       'timerName': timerName,
       'upgradeType': upgradeType,
+      'upgradeLevel': upgradeLevel,
       'readyDateTime': readyDateTime.toIso8601String(),
     };
   }
@@ -37,6 +40,7 @@ class TimerModel {
       upgradeId: map['UpgradeId'],
       timerName: map['TimerName'],
       upgradeType: map['UpgradeType'],
+      upgradeLevel: map['UpgradeLevel'],
       readyDateTime: DateTime.parse(map['ReadyDateTime']),
     );
   }
@@ -48,6 +52,7 @@ class TimerModel {
     int? upgradeId,
     String? timerName,
     String? upgradeType,
+    int? upgradeLevel,
     DateTime? expiry,
   }) {
     return TimerModel(
@@ -57,6 +62,7 @@ class TimerModel {
       upgradeId: upgradeId ?? this.upgradeId,
       timerName: timerName ?? this.timerName,
       upgradeType: upgradeType ?? this.upgradeType,
+      upgradeLevel: upgradeLevel ?? this.upgradeLevel,
       readyDateTime: readyDateTime,
     );
   }

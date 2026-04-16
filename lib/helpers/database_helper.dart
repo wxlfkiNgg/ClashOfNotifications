@@ -45,6 +45,7 @@ class DatabaseHelper {
             UpgradeId INTEGER,
             TimerName TEXT,
             UpgradeType TEXT,
+            UpgradeLevel INTEGER,
             ReadyDateTime TEXT
           )
         ''');
@@ -115,7 +116,7 @@ class DatabaseHelper {
           {'id': 1000058, 'name': 'Gem Mine', 'type': 'Building'},
           {'id': 1000059, 'name': 'Workshop', 'type': 'Building'},
           {'id': 1000063, 'name': 'Lava Launcher', 'type': 'Building'},
-          {'id': 1000065, 'name': 'B.O.B Control/X-Bow', 'type': 'Building'},
+          {'id': 1000065, 'name': 'B.O.B Control', 'type': 'Building'},
           {'id': 1000067, 'name': 'Scattershot', 'type': 'Building'},
           {'id': 1000068, 'name': 'Pet House', 'type': 'Building'},
           {'id': 1000070, 'name': 'Blacksmith', 'type': 'Building'},
@@ -124,7 +125,7 @@ class DatabaseHelper {
           {'id': 1000077, 'name': 'Monolith', 'type': 'Building'},
           {'id': 1000078, 'name': 'O.T.T.O''s Outpost', 'type': 'Building'},
           {'id': 1000079, 'name': 'Multi-Gear Tower', 'type': 'Building'},
-          {'id': 1000081, 'name': 'B.O.B Control/X-Bow', 'type': 'Building'},
+          {'id': 1000081, 'name': 'X-Bow', 'type': 'Building'},
           {'id': 1000082, 'name': 'Healing Hut', 'type': 'Building'},
           {'id': 1000084, 'name': 'Multi-Archer Tower', 'type': 'Building'},
           {'id': 1000085, 'name': 'Ricochet Cannon', 'type': 'Building'},
@@ -180,6 +181,7 @@ class DatabaseHelper {
           {'id': 4000110, 'name': 'Root Rider', 'type': 'Army'},
           {'id': 4000123, 'name': 'Druid', 'type': 'Army'},
           {'id': 4000132, 'name': 'Thrower', 'type': 'Army'},
+          {'id': 4000135, 'name': 'Troop Launcher', 'type': 'Army'},
           {'id': 4000150, 'name': 'Furnace', 'type': 'Army'},
           {'id': 4000177, 'name': 'Meteor Golem', 'type': 'Army'},
           {'id': 12000000, 'name': 'Bomb', 'type': 'Building'},
@@ -344,7 +346,7 @@ class DatabaseHelper {
       upgradeMessage = 'Clock Tower Boost is ready';
       quietNotification = true;
     } else {
-      upgradeMessage = '${timer.timerName} has finished upgrading.';
+      upgradeMessage = '${timer.timerName} has finished upgrading to level ${timer.upgradeLevel}';
     }
     
     // These villages aren't important so no sound is necessary

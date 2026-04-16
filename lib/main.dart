@@ -157,6 +157,7 @@ class HomePageState extends State<HomePage> {
           upgradeId: t['upgradeId'],
           timerName: t['timerName'] ?? 'unknown_${t['upgradeId']}',
           upgradeType: t['upgradeType'],
+          upgradeLevel: t['upgradeLevel'] ?? 0,
           readyDateTime: t['readyDateTime'],
         );
 
@@ -277,8 +278,8 @@ class HomePageState extends State<HomePage> {
                 'villageType': 'Home Village',
                 'upgradeId': null,
                 'timerName': 'Helpers Ready',
-                'nextUpgrade': null,
                 'upgradeType': 'Alert',
+                'upgradeLevel': null,
                 'readyDateTime': readyDateTime,
               });
 
@@ -323,6 +324,7 @@ class HomePageState extends State<HomePage> {
               final upgradeName = upgradeId != null
                   ? await dbHelper.getUpgradeName(upgradeId)
                   : null;
+              final upgradeLevel = item['lvl'] + 1;
               Duration duration = Duration(seconds: item['timer']);
               final readyDateTime = exportTime.add(duration);
 
@@ -342,8 +344,8 @@ class HomePageState extends State<HomePage> {
                 'villageType': villageType,
                 'upgradeId': upgradeId,
                 'timerName': upgradeName,
-                'nextUpgrade': null,
                 'upgradeType': upgradeType,
+                'upgradeLevel': upgradeLevel,
                 'readyDateTime': processedReadyDateTime,
               });
             }
@@ -361,8 +363,8 @@ class HomePageState extends State<HomePage> {
             'villageType': 'Builder Base',
             'upgradeId': null,
             'timerName': 'Clock Tower Boost Ready',
-            'nextUpgrade': null,
             'upgradeType': 'Alert',
+            'upgradeLevel': null,
             'readyDateTime': readyDateTime,
           });
         }
