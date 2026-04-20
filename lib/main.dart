@@ -9,6 +9,10 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:clashofnotifications/models/time_colour_period_model.dart';
+import 'package:clashofnotifications/models/player_model.dart';
+import 'package:clashofnotifications/pages/settings_page.dart';
 
 void main() async {
   final FlutterLocalNotificationsPlugin notificationsPlugin =
@@ -17,10 +21,13 @@ void main() async {
 
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
-  final InitializationSettings initializationSettings = InitializationSettings(
+  const InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
   );
-  await notificationsPlugin.initialize(initializationSettings);
+  
+  notificationsPlugin.initialize(
+      settings: initializationSettings,
+    );
 
   tz.initializeTimeZones();
   tz.setLocalLocation(
@@ -109,12 +116,8 @@ class HomePageState extends State<HomePage> {
     'Pet',
     'Alert'
   ];
-  final List<String> players = [
-    'The Wolf',
-    'Splyce',
-    'P.L.U.C.K.',
-    'The Big Fella'
-  ];
+  List<String> players = []; // Will retrieve from database
+  List<PlayerModel> playerModels = [];
 
   List<TimerModel> timers = [];
   late DatabaseHelper dbHelper;
@@ -124,6 +127,7 @@ class HomePageState extends State<HomePage> {
   List<String> selectedVillageTypes = [];
   List<String> selectedUpgradeTypes = [];
   List<String> selectedPlayers = [];
+  List<TimeColourPeriodModel> customTimeColourPeriods = [];
 
   // Ask for permission (simp) to send notifications if not already approved
   Future<void> _requestNotificationPermission() async {
@@ -138,6 +142,79 @@ class HomePageState extends State<HomePage> {
     return data?.text;
   }
 
+  Future<PlayerModel?> _promptCreatePlayerFromTag(String tag) async {
+    final controller = TextEditingController();
+    Color selectedColour = Colors.grey;
+
+    return await showDialog<PlayerModel>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF212121),
+              title: const Text('Unknown Player',
+                style: TextStyle(color: Colors.greenAccent)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Ohi, and who might this be?',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Player Name',
+                      labelStyle: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ColorPicker(
+                    pickerColor: selectedColour,
+                    onColorChanged: (colour) {
+                      setState(() {
+                        selectedColour = colour;
+                      });
+                    },
+                    pickerAreaHeightPercent: 0.8,
+                    enableAlpha: false,
+                    displayThumbColor: true,
+                    labelTypes: [],
+                    paletteType: PaletteType.hsvWithHue,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(null),
+                  child: const Text('Skip', style: TextStyle(color: Colors.red)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final name = controller.text.trim();
+                    if (name.isEmpty) {
+                      return;
+                    }
+                    Navigator.of(context).pop(PlayerModel(
+                      name: name,
+                      tag: tag,
+                      colourValue: selectedColour.toARGB32(),
+                    ));
+                  },
+                  child: const Text('Save', style: TextStyle(color: Colors.greenAccent)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<bool> _uploadFromClipboard() async {
     final clipboardText = await _getClipboardData() ??
         ''; //For this case we'll just use an empty string (not null) if there's no text retrieved from the clipboard
@@ -145,14 +222,28 @@ class HomePageState extends State<HomePage> {
 
     if (isValid) {
       final Map<String, dynamic> village = jsonDecode(clipboardText);
-      final String playerName = _getPlayerNameFromTag(village['tag']);
-      await dbHelper.deleteTimersForPlayer(playerName);
+      String playerName = _getPlayerNameFromTag(village['tag']);
+
+      PlayerModel? newPlayer;
+      if (playerName.startsWith('Unknown: ')) {
+        newPlayer = await _promptCreatePlayerFromTag(village['tag']);
+        if (newPlayer != null) {
+          final existingPlayers = await dbHelper.getPlayers();
+          existingPlayers.add(newPlayer);
+          await dbHelper.savePlayers(existingPlayers);
+          await _loadPlayers();
+          playerName = newPlayer.name;
+        }
+      }
+
+      await dbHelper.deleteTimersForPlayerTag(playerName, village['tag']);
 
       final List<Map<String, dynamic>> timers =
           await _extractUpgradingItems(village, dbHelper);
       for (final t in timers) {
         final newTimer = TimerModel(
           player: t['player'],
+          playerTag: t['playerTag'],
           villageType: t['villageType'],
           upgradeId: t['upgradeId'],
           timerName: t['timerName'] ?? 'unknown_${t['upgradeId']}',
@@ -171,24 +262,12 @@ class HomePageState extends State<HomePage> {
   }
 
   String _getPlayerNameFromTag(String tag) {
-    switch (tag) {
-      case '#Q0YY0CR0':
-        return 'The Wolf';
-      case '#GRJLG0RR0':
-        return 'Splyce';
-      case '#GQUV2JRY2':
-        return 'P.L.U.C.K.';
-      case '#L9L80R00':
-        return 'The Big Fella';
-      case '#G9C8VL9JG':
-        return 'Sheepashoo';
-      case '#GJ9UCCG8J':
-        return 'Joe';
-      case '#GURVPVUU9':
-        return 'Bruce 6';
-      default:
-        return 'Unknown: $tag';
+    for (final player in playerModels) {
+      if (player.tag == tag) {
+        return player.name;
+      }
     }
+    return 'Unknown: $tag';
   }
 
   //Super simple check on provided text to check if it's actually a village export
@@ -246,6 +325,7 @@ class HomePageState extends State<HomePage> {
     final DateTime exportTime =
         DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
     final String playerName = _getPlayerNameFromTag(village['tag']);
+    final String playerTag = village['tag'];
 
     final categories = [
       'helpers',
@@ -275,6 +355,7 @@ class HomePageState extends State<HomePage> {
 
               upgradingItems.add({
                 'player': playerName,
+                'playerTag': playerTag,
                 'villageType': 'Home Village',
                 'upgradeId': null,
                 'timerName': 'Helpers Ready',
@@ -341,6 +422,7 @@ class HomePageState extends State<HomePage> {
 
               upgradingItems.add({
                 'player': playerName,
+                'playerTag': playerTag,
                 'villageType': villageType,
                 'upgradeId': upgradeId,
                 'timerName': upgradeName,
@@ -360,6 +442,7 @@ class HomePageState extends State<HomePage> {
 
           upgradingItems.add({
             'player': playerName,
+            'playerTag': playerTag,
             'villageType': 'Builder Base',
             'upgradeId': null,
             'timerName': 'Clock Tower Boost Ready',
@@ -565,20 +648,46 @@ class HomePageState extends State<HomePage> {
     return effectiveTime;
   }
 
-  // TODO: make this customisable
-  Color _getUpgradeTimeColor(DateTime time) {
+  Color _getUpgradeTimeColour(DateTime time) {
     final hour = time.hour;
     if (time.isBefore(DateTime.now())) {
       return Colors.green; // Already done, trumps all following checks
-    } else if (hour >= 23 || hour < 6) {
-      return Colors.red; // 11 PM and 6 AM
-    } else if (hour >= 6 && hour < 7) {
-      return Colors.orange; // 6 AM and 7 AM
-    } else if (hour >= 7 && hour < 8) {
-      return Colors.yellow; // 7 AM and 8 AM
+    }
+
+    if (customTimeColourPeriods.isEmpty) {
+      // Do default colours if no custom ones are defined
+      if (hour >= 23 || hour < 6) {
+        return Colors.red; // 11 PM and 6 AM
+      } else if (hour >= 6 && hour < 7) {
+        return Colors.orange; // 6 AM and 7 AM
+      } else if (hour >= 7 && hour < 8) {
+        return Colors.yellow; // 7 AM and 8 AM
+      } else {
+        return Colors.white;
+      }
     } else {
+      for (final period in customTimeColourPeriods) {
+        if (period.matches(hour)) {
+          return Color(period.colourValue);
+        }
+      }
       return Colors.white;
     }
+  }
+
+  Future<void> _loadUserTimeColourPeriods() async {
+    final periods = await dbHelper.getTimeColourPeriods();
+    setState(() {
+      customTimeColourPeriods = periods;
+    });
+  }
+
+  Future<void> _loadPlayers() async {
+    final loadedPlayers = await dbHelper.getPlayers();
+    playerModels = loadedPlayers;
+    setState(() {
+      players = playerModels.map((p) => p.name).toList();
+    });
   }
 
   @override
@@ -588,6 +697,8 @@ class HomePageState extends State<HomePage> {
     _requestNotificationPermission();
     _loadTimers(); // Initial load of timers
     _startTimer(); // Keep them refreshing
+    _loadUserTimeColourPeriods();
+    _loadPlayers();
   }
 
   Future<void> _loadTimers() async {
@@ -834,19 +945,12 @@ class HomePageState extends State<HomePage> {
   }
 
   Color getPlayerColour(String player) {
-    if (player == 'The Wolf' || player == 'The Big Fella') {
-      return Colors.green;
-    } else if (player == 'Splyce') {
-      return Colors.blueAccent;
-    } else if (player == 'P.L.U.C.K.') {
-      return Colors.deepOrangeAccent;
-    } else if (player == 'Bruce 6') {
-      return Colors.greenAccent;
-    } else if (player == 'Joe') {
-      return Colors.purple;
-    } else {
-      return Colors.grey;
+    for (final p in playerModels) {
+      if (p.name == player) {
+        return p.colour;
+      }
     }
+    return Colors.grey;
   }
 
   @override
@@ -934,6 +1038,18 @@ class HomePageState extends State<HomePage> {
         title: const Text('Timers'),
         actions: [
           // Toggle for Timer/Date View
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
+            onPressed: () async {
+              await Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => SettingsPage(dbHelper: dbHelper),
+              ));
+              _loadUserTimeColourPeriods();
+              _loadPlayers();
+              _loadTimers();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.timer),
             onPressed: () async {
@@ -1031,7 +1147,7 @@ class HomePageState extends State<HomePage> {
                                               Text(
                                                 timeDisplay,
                                                 style: TextStyle(
-                                                  color: _getUpgradeTimeColor(
+                                                  color: _getUpgradeTimeColour(
                                                       timer.readyDateTime),
                                                   fontSize: 8,
                                                   fontWeight: FontWeight.bold,
@@ -1080,7 +1196,7 @@ class HomePageState extends State<HomePage> {
                                               Text(
                                                 timeDisplay,
                                                 style: TextStyle(
-                                                  color: _getUpgradeTimeColor(
+                                                  color: _getUpgradeTimeColour(
                                                       timer.readyDateTime),
                                                   fontSize: 8,
                                                   fontWeight: FontWeight.bold,
@@ -1179,7 +1295,7 @@ class HomePageState extends State<HomePage> {
                   child: Text(
                     timeDisplay,
                     style: TextStyle(
-                      color: _getUpgradeTimeColor(readyDateTime),
+                      color: _getUpgradeTimeColour(readyDateTime),
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),

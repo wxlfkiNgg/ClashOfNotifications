@@ -1,6 +1,7 @@
 class TimerModel {
   int? timerId;
   String player;
+  String? playerTag;
   String? villageType;
   int? upgradeId;
   String timerName;
@@ -11,6 +12,7 @@ class TimerModel {
   TimerModel({
     this.timerId,
     required this.player,
+    required this.playerTag,
     required this.villageType,
     required this.upgradeId,
     required this.timerName,
@@ -23,6 +25,7 @@ class TimerModel {
     return {
       'timerId': timerId,
       'player': player,
+      'playerTag': playerTag,
       'villageType': villageType,
       'upgradeId': upgradeId,
       'timerName': timerName,
@@ -36,6 +39,7 @@ class TimerModel {
     return TimerModel(
       timerId: map['TimerId'],
       player: map['Player'],
+      playerTag: map['PlayerTag'],
       villageType: map['VillageType'],
       upgradeId: map['UpgradeId'],
       timerName: map['TimerName'],
@@ -48,22 +52,24 @@ class TimerModel {
   TimerModel copyWith({
     int? timerId,
     String? player,
+    String? playerTag,
     String? villageType,
     int? upgradeId,
     String? timerName,
     String? upgradeType,
     int? upgradeLevel,
-    DateTime? expiry,
+    DateTime? readyDateTime,
   }) {
     return TimerModel(
       timerId: timerId ?? this.timerId,
       player: player ?? this.player,
+      playerTag: playerTag ?? this.playerTag,
       villageType: villageType ?? this.villageType,
       upgradeId: upgradeId ?? this.upgradeId,
       timerName: timerName ?? this.timerName,
       upgradeType: upgradeType ?? this.upgradeType,
       upgradeLevel: upgradeLevel ?? this.upgradeLevel,
-      readyDateTime: readyDateTime,
+      readyDateTime: readyDateTime ?? this.readyDateTime,
     );
   }
 }
