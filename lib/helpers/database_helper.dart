@@ -19,10 +19,46 @@ class DatabaseHelper {
   static List<Map<String, dynamic>>? _upgrades;
 
   static const List<Map<String, dynamic>> defaultPlayersData = [
-    {'Name': 'wolfdakiNgg', 'Tag': '#Q0YY0CR0', 'ColourValue': 4283215696},
-    {'Name': 'Splyce', 'Tag': '#GRJLG0RR0', 'ColourValue': 4280690210},
-    {'Name': 'P.L.U.C.K.', 'Tag': '#GQUV2JRY2', 'ColourValue': 4294924066},
-    {'Name': 'The Big Fella', 'Tag': '#L9L80R00', 'ColourValue': 4283215696},
+    {
+      'Name': 'wolfdakiNgg',
+      'Tag': '#Q0YY0CR0',
+      'ColourValue': 4283215696,
+      'Active': 1,
+      'DisplayOrder': 0,
+      'ExportClockTowerBoost': 1,
+      'ExportHelperTimer': 1,
+      'ExportBuilderBaseUpgrades': 1,
+    },
+    {
+      'Name': 'Splyce',
+      'Tag': '#GRJLG0RR0',
+      'ColourValue': 4280690210,
+      'Active': 1,
+      'DisplayOrder': 1,
+      'ExportClockTowerBoost': 1,
+      'ExportHelperTimer': 1,
+      'ExportBuilderBaseUpgrades': 1,
+    },
+    {
+      'Name': 'P.L.U.C.K.',
+      'Tag': '#GQUV2JRY2',
+      'ColourValue': 4294924066,
+      'Active': 1,
+      'DisplayOrder': 2,
+      'ExportClockTowerBoost': 1,
+      'ExportHelperTimer': 1,
+      'ExportBuilderBaseUpgrades': 1,
+    },
+    {
+      'Name': 'The Big Fella',
+      'Tag': '#L9L80R00',
+      'ColourValue': 4283215696,
+      'Active': 1,
+      'DisplayOrder': 3,
+      'ExportClockTowerBoost': 1,
+      'ExportHelperTimer': 1,
+      'ExportBuilderBaseUpgrades': 1,
+    },
   ];
 
   final FlutterLocalNotificationsPlugin notificationsPlugin =
@@ -95,7 +131,12 @@ class DatabaseHelper {
             PlayerId INTEGER PRIMARY KEY AUTOINCREMENT,
             Name TEXT,
             Tag TEXT,
-            ColourValue INTEGER
+            ColourValue INTEGER,
+            Active INTEGER DEFAULT 1,
+            DisplayOrder INTEGER DEFAULT 0,
+            ExportClockTowerBoost INTEGER DEFAULT 1,
+            ExportHelperTimer INTEGER DEFAULT 1,
+            ExportBuilderBaseUpgrades INTEGER DEFAULT 1
           )
         ''');
 
@@ -211,7 +252,10 @@ class DatabaseHelper {
 
   Future<List<PlayerModel>> getPlayers() async {
     final db = await database;
-    final maps = await db.query(tableNamePlayers, orderBy: 'Name ASC');
+    final maps = await db.query(
+      tableNamePlayers,
+      orderBy: 'DisplayOrder ASC, Name ASC',
+    );
     return maps.map((map) => PlayerModel.fromMap(map)).toList();
   }
 
@@ -232,6 +276,20 @@ class DatabaseHelper {
       tableNamePlayers,
       where: 'PlayerId = ?',
       whereArgs: [id],
+    );
+  }
+
+  Future<void> updatePlayerExportSettings(PlayerModel player) async {
+    final db = await database;
+    await db.update(
+      tableNamePlayers,
+      {
+        'ExportClockTowerBoost': player.exportClockTowerBoost ? 1 : 0,
+        'ExportHelperTimer': player.exportHelperTimer ? 1 : 0,
+        'ExportBuilderBaseUpgrades': player.exportBuilderBaseUpgrades ? 1 : 0,
+      },
+      where: 'PlayerId = ?',
+      whereArgs: [player.id],
     );
   }
 

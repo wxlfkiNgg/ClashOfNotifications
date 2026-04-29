@@ -118,11 +118,14 @@ class HomePageState extends State<HomePage> {
   ];
   List<String> players = []; // Will retrieve from database
   List<PlayerModel> playerModels = [];
+  final Set<int> selectedTimerIds = {};
 
   List<TimerModel> timers = [];
   late DatabaseHelper dbHelper;
   Timer? _timer;
   String displayMode = 'Timer';
+
+  bool get _isSelectionMode => selectedTimerIds.isNotEmpty;
 
   List<String> selectedVillageTypes = [];
   List<String> selectedUpgradeTypes = [];
@@ -203,6 +206,7 @@ class HomePageState extends State<HomePage> {
                       name: name,
                       tag: tag,
                       colourValue: selectedColour.toARGB32(),
+                      displayOrder: playerModels.length,
                     ));
                   },
                   child: const Text('Save', style: TextStyle(color: Colors.greenAccent)),
@@ -270,6 +274,74 @@ class HomePageState extends State<HomePage> {
     return 'Unknown: $tag';
   }
 
+  PlayerModel? _getPlayerByName(String name) {
+    try {
+      return playerModels.firstWhere((player) => player.name == name);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _clearTimerSelection() {
+    setState(() {
+      selectedTimerIds.clear();
+    });
+  }
+
+  void _toggleTimerSelection(TimerModel timer) {
+    setState(() {
+      if (timer.timerId == null) return;
+      if (selectedTimerIds.contains(timer.timerId)) {
+        selectedTimerIds.remove(timer.timerId);
+      } else {
+        selectedTimerIds.add(timer.timerId!);
+      }
+    });
+  }
+
+  Future<void> _deleteSelectedTimers() async {
+    if (selectedTimerIds.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF212121),
+              title: const Text('Delete timers?',
+                  style: TextStyle(color: Colors.greenAccent)),
+              content: Text(
+                'Delete ${selectedTimerIds.length} selected timer${selectedTimerIds.length == 1 ? '' : 's'}?',
+                style: const TextStyle(color: Colors.white70),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child:
+                      const Text('Cancel', style: TextStyle(color: Colors.red)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Delete',
+                      style: TextStyle(color: Colors.greenAccent)),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!confirmed) {
+      return;
+    }
+
+    for (final timerId in selectedTimerIds) {
+      await dbHelper.deleteTimer(timerId);
+    }
+
+    _clearTimerSelection();
+    await _loadTimers();
+  }
+
   //Super simple check on provided text to check if it's actually a village export
   //This is not the be-all and end-all, but it should catch 99.999999% of uploaded data that isn't a clash village export
   //Also, did you know that 62% of statistics are completely made up?
@@ -327,6 +399,11 @@ class HomePageState extends State<HomePage> {
     final String playerName = _getPlayerNameFromTag(village['tag']);
     final String playerTag = village['tag'];
 
+    final PlayerModel? player = _getPlayerByName(playerName);
+    if (player == null || !player.active) {
+      return upgradingItems;
+    }
+
     final categories = [
       'helpers',
       'guardians',
@@ -347,7 +424,7 @@ class HomePageState extends State<HomePage> {
     for (final category in categories) {
       if (village.containsKey(category) && village[category] is List) {
         //Helper cooldowns are handled separately
-        if (category == 'helpers') {
+        if (category == 'helpers' && player.exportHelperTimer) {
           for (final item in village[category]) {
             if (item is Map && item.containsKey('helper_cooldown')) {
               Duration duration = Duration(seconds: item['helper_cooldown']);
@@ -382,7 +459,7 @@ class HomePageState extends State<HomePage> {
               final String upgradeType;
 
               //because fuck builder base right?
-              if (playerName == 'The Big Fella' &&
+              if (!player.exportBuilderBaseUpgrades &&
                   villageType == 'Builder Base') {
                 break;
               }
@@ -433,9 +510,10 @@ class HomePageState extends State<HomePage> {
             }
           }
         }
-      } else if (village.containsKey(category) && category == 'boosts') {
-        if (village[category] is Map &&
-            village[category].containsKey('clocktower_cooldown')) {
+        } else if (village.containsKey(category) && category == 'boosts') {
+          if (village[category] is Map &&
+            village[category].containsKey('clocktower_cooldown') &&
+            player.exportClockTowerBoost) {
           Duration duration =
               Duration(seconds: village[category]['clocktower_cooldown']);
           final readyDateTime = exportTime.add(duration);
@@ -686,7 +764,7 @@ class HomePageState extends State<HomePage> {
     final loadedPlayers = await dbHelper.getPlayers();
     playerModels = loadedPlayers;
     setState(() {
-      players = playerModels.map((p) => p.name).toList();
+      players = playerModels.where((p) => p.active).map((p) => p.name).toList();
     });
   }
 
@@ -695,16 +773,20 @@ class HomePageState extends State<HomePage> {
     super.initState();
     dbHelper = DatabaseHelper();
     _requestNotificationPermission();
-    _loadTimers(); // Initial load of timers
-    _startTimer(); // Keep them refreshing
     _loadUserTimeColourPeriods();
-    _loadPlayers();
+    _loadPlayers().then((_) => _loadTimers()); // Load players first so active filtering works
+    _startTimer(); // Keep them refreshing
   }
 
   Future<void> _loadTimers() async {
     final loadedTimers = await dbHelper.getTimers();
+    final activePlayers = playerModels.where((p) => p.active).map((p) => p.name).toSet();
 
     final filteredTimers = loadedTimers.where((timer) {
+      if (!activePlayers.contains(timer.player)) {
+        return false;
+      }
+
       bool matchesPlayer =
           selectedPlayers.isEmpty || selectedPlayers.contains(timer.player);
       bool matchesVillageType = selectedVillageTypes.isEmpty ||
@@ -817,7 +899,7 @@ class HomePageState extends State<HomePage> {
                     ...players.map((player) {
                       return ListTile(
                         title: Text(player,
-                            style: const TextStyle(color: Colors.white)),
+                            style: TextStyle(color: getPlayerColour(player))),
                         selected: selectedPlayers.contains(player),
                         onTap: () {
                           setState(() {
@@ -1035,43 +1117,58 @@ class HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Timers'),
-        actions: [
-          // Toggle for Timer/Date View
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Settings',
-            onPressed: () async {
-              await Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => SettingsPage(dbHelper: dbHelper),
-              ));
-              _loadUserTimeColourPeriods();
-              _loadPlayers();
-              _loadTimers();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.timer),
-            onPressed: () async {
-              setState(() {
-                displayMode = displayMode == 'Timer'
-                    ? 'Date'
-                    : 'Timer'; // god this line is elegant
-              });
-            },
-          ),
-          // Filter Button
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () => _showFilterDialog(context),
-          ),
-          // Clear Filters Button
-          IconButton(
-            icon: const Icon(Icons.clear),
-            tooltip: 'Clear Filters',
-            onPressed: _resetFilters,
-          ),
-        ],
+        title: _isSelectionMode
+            ? Text('${selectedTimerIds.length} selected')
+            : const Text('Timers'),
+        actions: _isSelectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  tooltip: 'Delete selected timers',
+                  onPressed: _deleteSelectedTimers,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Cancel selection',
+                  onPressed: _clearTimerSelection,
+                ),
+              ]
+            : [
+                IconButton(
+                  icon: const Icon(Icons.settings),
+                  tooltip: 'Settings',
+                  onPressed: () async {
+                    await Navigator.of(context).push(MaterialPageRoute(
+                      builder: (context) => SettingsPage(dbHelper: dbHelper),
+                    ));
+                    _loadUserTimeColourPeriods();
+                    _loadPlayers();
+                    _loadTimers();
+                  },
+                ),
+                // Toggle for Timer/Date View
+                IconButton(
+                  icon: const Icon(Icons.timer),
+                  onPressed: () async {
+                    setState(() {
+                      displayMode = displayMode == 'Timer'
+                          ? 'Date'
+                          : 'Timer'; // god this line is elegant
+                    });
+                  },
+                ),
+                // Filter Button
+                IconButton(
+                  icon: const Icon(Icons.filter_list),
+                  onPressed: () => _showFilterDialog(context),
+                ),
+                // Clear Filters Button
+                IconButton(
+                  icon: const Icon(Icons.clear),
+                  tooltip: 'Clear Filters',
+                  onPressed: _resetFilters,
+                ),
+              ],
       ),
       body: ListView.builder(
         itemCount: timerEntries.length + (hasHelperTimers ? 1 : 0),
@@ -1257,12 +1354,22 @@ class HomePageState extends State<HomePage> {
               upgradeIcon = Icons.question_mark;
           }
 
+          final bool isSelected =
+              timer.timerId != null && selectedTimerIds.contains(timer.timerId);
+
           return GestureDetector(
-            onLongPress: () async {
-              await _confirmDelete(context, timer.timerId);
+            onLongPress: () {
+              _toggleTimerSelection(timer);
             },
+            onTap: _isSelectionMode
+                ? () {
+                    _toggleTimerSelection(timer);
+                  }
+                : null,
             child: Card(
-              color: const Color(0xFF212121),
+              color: isSelected
+                  ? Colors.greenAccent.withAlpha(51)
+                  : const Color(0xFF212121),
               margin:
                   const EdgeInsets.symmetric(vertical: 4.0, horizontal: 1.0),
               child: ListTile(
@@ -1308,14 +1415,15 @@ class HomePageState extends State<HomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          final messenger = ScaffoldMessenger.of(context);
           final bool confirmed = await _uploadFromClipboard();
           if (confirmed) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            messenger.showSnackBar(
               const SnackBar(
                   content: Text('Data uploaded successfully - good job kiddo')),
             );
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
+            messenger.showSnackBar(
               const SnackBar(
                   content: Text(
                       'Data is not in the expected format - copy the shit again mate.')),
