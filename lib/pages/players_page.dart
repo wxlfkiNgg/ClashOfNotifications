@@ -34,6 +34,9 @@ class PlayersPageState extends State<PlayersPage> {
     final tagController = TextEditingController(text: existing?.tag ?? '');
     Color selectedColour = existing?.colour ?? Colors.grey;
     bool active = existing?.active ?? true;
+    bool exportClockTowerBoost = existing?.exportClockTowerBoost ?? true;
+    bool exportHelperTimer = existing?.exportHelperTimer ?? true;
+    bool exportBuilderBaseUpgrades = existing?.exportBuilderBaseUpgrades ?? true;
 
     await showDialog(
       context: dialogContext,
@@ -44,7 +47,7 @@ class PlayersPageState extends State<PlayersPage> {
           backgroundColor: const Color(0xFF212121),
           title: Text(
             existing == null ? 'Add Player' : 'Edit Player',
-            style: const TextStyle(color: Colors.greenAccent),
+            style: TextStyle(color: Theme.of(context).colorScheme.secondary),
           ),
           content: StatefulBuilder(
             builder: (context, setState) {
@@ -52,6 +55,7 @@ class PlayersPageState extends State<PlayersPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const SizedBox(height: 10),
                     TextField(
                       controller: nameController,
                       style: const TextStyle(color: Colors.white),
@@ -70,19 +74,74 @@ class PlayersPageState extends State<PlayersPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    SwitchListTile(
-                      title: const Text('Active', style: TextStyle(color: Colors.white)),
-                      subtitle: const Text(
-                        'If inactive, this village will be hidden and no timers will load',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                      value: active,
-                      onChanged: (value) {
-                        setState(() {
-                          active = value;
-                        });
+                    Builder(
+                      builder: (context) {
+                        Widget buildToggleTile(
+                          String title,
+                          bool currentValue,
+                          ValueChanged<bool> onChanged,
+                        ) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF262626),
+                              border: Border.all(color: Colors.white12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              title: Text(
+                                title,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              trailing: Transform.scale(
+                                scale: 0.84,
+                                child: Switch(
+                                  value: currentValue,
+                                  onChanged: onChanged,
+                                  activeThumbColor: Theme.of(context).colorScheme.secondary,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                              onTap: () => onChanged(!currentValue),
+                            ),
+                          );
+                        }
+
+                        return Column(
+                          children: [
+                            buildToggleTile(
+                              'Active',
+                              active,
+                              (value) => setState(() => active = value),
+                            ),
+                            buildToggleTile(
+                              'Export Clock Tower Boost',
+                              exportClockTowerBoost,
+                              (value) => setState(() => exportClockTowerBoost = value),
+                            ),
+                            buildToggleTile(
+                              'Export Helper Timer',
+                              exportHelperTimer,
+                              (value) => setState(() => exportHelperTimer = value),
+                            ),
+                            buildToggleTile(
+                              'Export Builder Base Upgrades',
+                              exportBuilderBaseUpgrades,
+                              (value) => setState(() => exportBuilderBaseUpgrades = value),
+                            ),
+                          ],
+                        );
                       },
-                      activeThumbColor: Colors.greenAccent,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Change player colour',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
                     ),
                     const SizedBox(height: 8),
                     ColorPicker(
@@ -121,6 +180,9 @@ class PlayersPageState extends State<PlayersPage> {
                   colourValue: selectedColour.toARGB32(),
                   active: active,
                   displayOrder: existing?.displayOrder ?? players.length,
+                  exportClockTowerBoost: exportClockTowerBoost,
+                  exportHelperTimer: exportHelperTimer,
+                  exportBuilderBaseUpgrades: exportBuilderBaseUpgrades,
                 );
 
                 final updatedPlayers = [...players];
@@ -145,7 +207,7 @@ class PlayersPageState extends State<PlayersPage> {
                 await widget.dbHelper.savePlayers(updatedPlayers);
                 await _loadPlayers();
               },
-              child: const Text('Save', style: TextStyle(color: Colors.greenAccent)),
+              child: Text('Save', style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
             ),
           ],
         );
@@ -188,8 +250,10 @@ class PlayersPageState extends State<PlayersPage> {
           builder: (context) {
             return AlertDialog(
               backgroundColor: const Color(0xFF212121),
-              title: const Text('Reset default players?',
-                  style: TextStyle(color: Colors.greenAccent)),
+              title: Text(
+                'Reset default players?',
+                style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+              ),
               content: const Text(
                 'This will restore the default player list and overwrite any custom players you have added.',
                 style: TextStyle(color: Colors.white70),
@@ -202,8 +266,9 @@ class PlayersPageState extends State<PlayersPage> {
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Reset',
-                      style: TextStyle(color: Colors.greenAccent)),
+                  child: Text(
+                      'Reset',
+                      style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
                 ),
               ],
             );
@@ -230,8 +295,9 @@ class PlayersPageState extends State<PlayersPage> {
           builder: (context) {
             return AlertDialog(
               backgroundColor: const Color(0xFF212121),
-              title: const Text('Delete player?',
-                  style: TextStyle(color: Colors.greenAccent)),
+              title: Text(
+                  'Delete player?',
+                  style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
               content: Text(
                 'Are you sure you want to delete ${player.name}? This will keep existing timers but move them to Unknown: ${player.tag}.',
                 style: const TextStyle(color: Colors.white70),
@@ -244,8 +310,9 @@ class PlayersPageState extends State<PlayersPage> {
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Delete',
-                      style: TextStyle(color: Colors.greenAccent)),
+                  child: Text(
+                      'Delete',
+                      style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
                 ),
               ],
             );
@@ -347,7 +414,7 @@ class PlayersPageState extends State<PlayersPage> {
                         ),
                         Switch(
                           value: player.active,
-                          activeThumbColor: Colors.greenAccent,
+                          activeThumbColor: Theme.of(context).colorScheme.secondary,
                           onChanged: (value) async {
                             player.active = value;
                             await widget.dbHelper.savePlayers(players);

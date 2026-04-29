@@ -43,7 +43,7 @@ class TimeColourPeriodsPageState extends State<TimeColourPeriodsPage> {
           backgroundColor: const Color(0xFF212121),
           title: Text(
             existing == null ? 'Add Colour Period' : 'Edit Colour Period',
-            style: const TextStyle(color: Colors.greenAccent),
+            style: TextStyle(color: Theme.of(context).colorScheme.secondary),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -143,6 +143,7 @@ class TimeColourPeriodsPageState extends State<TimeColourPeriodsPage> {
                   colourValue: selectedColour.toARGB32(),
                 );
 
+                final navigator = Navigator.of(context);
                 final updatedPeriods = [...periods];
                 if (existing != null) {
                   final index = updatedPeriods.indexWhere(
@@ -156,9 +157,9 @@ class TimeColourPeriodsPageState extends State<TimeColourPeriodsPage> {
 
                 await widget.dbHelper.saveTimeColourPeriods(updatedPeriods);
                 await _loadPeriods();
-                Navigator.of(context).pop();
+                navigator.pop();
               },
-              child: const Text('Save', style: TextStyle(color: Colors.greenAccent)),
+              child: Text('Save', style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
             ),
           ],
         );
@@ -208,7 +209,7 @@ class TimeColourPeriodsPageState extends State<TimeColourPeriodsPage> {
           : ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: periods.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final period = periods[index];
                 final rangeText =

@@ -179,7 +179,7 @@ class _PlayerExportSettingsDialogState
                   exportClockTowerBoost = value ?? true;
                 });
               },
-              activeColor: Colors.greenAccent,
+              activeColor: Theme.of(context).colorScheme.secondary,
               checkColor: Colors.black,
             ),
             const SizedBox(height: 8),
@@ -198,7 +198,7 @@ class _PlayerExportSettingsDialogState
                   exportHelperTimer = value ?? true;
                 });
               },
-              activeColor: Colors.greenAccent,
+              activeColor: Theme.of(context).colorScheme.secondary,
               checkColor: Colors.black,
             ),
             const SizedBox(height: 8),
@@ -217,7 +217,7 @@ class _PlayerExportSettingsDialogState
                   exportBuilderBaseUpgrades = value ?? true;
                 });
               },
-              activeColor: Colors.greenAccent,
+              activeColor: Theme.of(context).colorScheme.secondary,
               checkColor: Colors.black,
             ),
           ],
@@ -234,7 +234,7 @@ class _PlayerExportSettingsDialogState
         ElevatedButton(
           onPressed: _isSaving ? null : _saveSettings,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.greenAccent,
+            backgroundColor: Theme.of(context).colorScheme.secondary,
             disabledBackgroundColor: Colors.grey,
           ),
           child: _isSaving

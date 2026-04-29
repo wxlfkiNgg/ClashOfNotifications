@@ -14,6 +14,9 @@ import 'package:clashofnotifications/models/time_colour_period_model.dart';
 import 'package:clashofnotifications/models/player_model.dart';
 import 'package:clashofnotifications/pages/settings_page.dart';
 
+final ValueNotifier<Color> appAccentColorNotifier =
+    ValueNotifier<Color>(Colors.greenAccent);
+
 void main() async {
   final FlutterLocalNotificationsPlugin notificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -36,6 +39,12 @@ void main() async {
   // Force portrait orientation - app looks dogshit in landscape and this is easier than fixing
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
+  final dbHelper = DatabaseHelper();
+  final int? savedAppAccent = await dbHelper.getAppSettingValue('appAccentColour');
+  if (savedAppAccent != null) {
+    appAccentColorNotifier.value = Color(savedAppAccent);
+  }
+
   runApp(const MyApp());
 }
 
@@ -54,48 +63,71 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: Colors.grey[900],
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Colors.white),
-          bodyMedium: TextStyle(color: Colors.white70),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.greenAccent,
-            foregroundColor: Colors.black,
+    return ValueListenableBuilder<Color>(
+      valueListenable: appAccentColorNotifier,
+      builder: (context, accentColor, _) {
+        final theme = ThemeData.dark().copyWith(
+          scaffoldBackgroundColor: Colors.grey[900],
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: accentColor,
+            brightness: Brightness.dark,
           ),
-        ),
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.grey[850],
-          titleTextStyle: const TextStyle(
-              color: Colors.greenAccent,
+          textTheme: const TextTheme(
+            bodyLarge: TextStyle(color: Colors.white),
+            bodyMedium: TextStyle(color: Colors.white70),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              foregroundColor: Colors.black,
+            ),
+          ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: Colors.grey[850],
+            titleTextStyle: TextStyle(
+              color: accentColor,
               fontSize: 20,
-              fontWeight: FontWeight.bold),
-          iconTheme: const IconThemeData(color: Colors.greenAccent),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.grey[800],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
+              fontWeight: FontWeight.bold,
+            ),
+            iconTheme: IconThemeData(color: accentColor),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey[700]!),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.grey[800],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey[700]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: accentColor, width: 2),
+            ),
+            hintStyle: const TextStyle(color: Colors.white),
+            labelStyle: const TextStyle(color: Colors.white),
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Colors.greenAccent, width: 2),
+          iconTheme: IconThemeData(color: accentColor),
+          switchTheme: SwitchThemeData(
+            thumbColor: WidgetStatePropertyAll(accentColor),
+            trackColor: WidgetStatePropertyAll(accentColor.withAlpha(100)),
           ),
-          hintStyle: const TextStyle(color: Colors.white),
-          labelStyle: const TextStyle(color: Colors.white),
-        ),
-      ),
-      home: const HomePage(),
+          checkboxTheme: CheckboxThemeData(
+            fillColor: WidgetStatePropertyAll(accentColor),
+          ),
+          radioTheme: RadioThemeData(
+            fillColor: WidgetStatePropertyAll(accentColor),
+          ),
+        );
+
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: theme,
+          home: const HomePage(),
+        );
+      },
     );
   }
 }
@@ -131,6 +163,8 @@ class HomePageState extends State<HomePage> {
   List<String> selectedUpgradeTypes = [];
   List<String> selectedPlayers = [];
   List<TimeColourPeriodModel> customTimeColourPeriods = [];
+  Color dateHeadingColour = Colors.cyanAccent;
+  static const String _dateHeadingColourKey = 'dateHeadingColour';
 
   // Ask for permission (simp) to send notifications if not already approved
   Future<void> _requestNotificationPermission() async {
@@ -157,8 +191,10 @@ class HomePageState extends State<HomePage> {
           builder: (context, setState) {
             return AlertDialog(
               backgroundColor: const Color(0xFF212121),
-              title: const Text('Unknown Player',
-                style: TextStyle(color: Colors.greenAccent)),
+              title: Text(
+                'Unknown Player',
+                style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -209,7 +245,7 @@ class HomePageState extends State<HomePage> {
                       displayOrder: playerModels.length,
                     ));
                   },
-                  child: const Text('Save', style: TextStyle(color: Colors.greenAccent)),
+                  child: Text('Save', style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
                 ),
               ],
             );
@@ -307,8 +343,10 @@ class HomePageState extends State<HomePage> {
           builder: (context) {
             return AlertDialog(
               backgroundColor: const Color(0xFF212121),
-              title: const Text('Delete timers?',
-                  style: TextStyle(color: Colors.greenAccent)),
+              title: Text(
+                'Delete timers?',
+                style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+              ),
               content: Text(
                 'Delete ${selectedTimerIds.length} selected timer${selectedTimerIds.length == 1 ? '' : 's'}?',
                 style: const TextStyle(color: Colors.white70),
@@ -321,8 +359,10 @@ class HomePageState extends State<HomePage> {
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Delete',
-                      style: TextStyle(color: Colors.greenAccent)),
+                  child: Text(
+                    'Delete',
+                    style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+                  ),
                 ),
               ],
             );
@@ -760,6 +800,15 @@ class HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _loadDateHeadingColour() async {
+    final int? colourValue =
+        await dbHelper.getAppSettingValue(_dateHeadingColourKey);
+    setState(() {
+      dateHeadingColour =
+          colourValue != null ? Color(colourValue) : Colors.cyanAccent;
+    });
+  }
+
   Future<void> _loadPlayers() async {
     final loadedPlayers = await dbHelper.getPlayers();
     playerModels = loadedPlayers;
@@ -774,6 +823,7 @@ class HomePageState extends State<HomePage> {
     dbHelper = DatabaseHelper();
     _requestNotificationPermission();
     _loadUserTimeColourPeriods();
+    _loadDateHeadingColour();
     _loadPlayers().then((_) => _loadTimers()); // Load players first so active filtering works
     _startTimer(); // Keep them refreshing
   }
@@ -866,8 +916,8 @@ class HomePageState extends State<HomePage> {
             padding: const EdgeInsets.symmetric(horizontal: 10.0),
             child: Text(
               _dateHeaderLabel(date),
-              style: const TextStyle(
-                color: Colors.cyanAccent,
+              style: TextStyle(
+                color: dateHeadingColour,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -884,9 +934,9 @@ class HomePageState extends State<HomePage> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: const Color(0xFF212121),
-          title: const Text(
+          title: Text(
             'Filters',
-            style: TextStyle(color: Colors.greenAccent, fontSize: 16),
+            style: TextStyle(color: Theme.of(context).colorScheme.secondary, fontSize: 16),
           ),
           content: StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
@@ -928,7 +978,7 @@ class HomePageState extends State<HomePage> {
                 _loadTimers();
                 Navigator.pop(context);
               },
-              child: const Text('Apply', style: TextStyle(color: Colors.green)),
+              child: Text('Apply', style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
             ),
             TextButton(
               onPressed: () {
@@ -1054,10 +1104,12 @@ class HomePageState extends State<HomePage> {
     // Sort within each group: helpers first, then others
     grouped.forEach((key, list) {
       list.sort((a, b) {
-        if (a.timerName == 'Helpers Ready' && b.timerName != 'Helpers Ready')
+        if (a.timerName == 'Helpers Ready' && b.timerName != 'Helpers Ready') {
           return -1;
-        if (a.timerName != 'Helpers Ready' && b.timerName == 'Helpers Ready')
+        }
+        if (a.timerName != 'Helpers Ready' && b.timerName == 'Helpers Ready') {
           return 1;
+        }
         return 0;
       });
     });
@@ -1139,9 +1191,15 @@ class HomePageState extends State<HomePage> {
                   tooltip: 'Settings',
                   onPressed: () async {
                     await Navigator.of(context).push(MaterialPageRoute(
-                      builder: (context) => SettingsPage(dbHelper: dbHelper),
+                      builder: (context) => SettingsPage(
+                        dbHelper: dbHelper,
+                        onAccentChanged: (colour) {
+                          appAccentColorNotifier.value = colour;
+                        },
+                      ),
                     ));
                     _loadUserTimeColourPeriods();
+                    _loadDateHeadingColour();
                     _loadPlayers();
                     _loadTimers();
                   },
@@ -1368,7 +1426,7 @@ class HomePageState extends State<HomePage> {
                 : null,
             child: Card(
               color: isSelected
-                  ? Colors.greenAccent.withAlpha(51)
+                  ? Theme.of(context).colorScheme.secondary.withAlpha(51)
                   : const Color(0xFF212121),
               margin:
                   const EdgeInsets.symmetric(vertical: 4.0, horizontal: 1.0),

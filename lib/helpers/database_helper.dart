@@ -14,6 +14,7 @@ class DatabaseHelper {
   static const String tableNameTimers = 'timers';
   static const String tableNameUpgrades = 'upgrades';
   static const String tableNameSettings = 'settings';
+  static const String tableNameAppSettings = 'app_settings';
   static const String tableNamePlayers = 'players';
 
   static List<Map<String, dynamic>>? _upgrades;
@@ -98,7 +99,7 @@ class DatabaseHelper {
     final packageInfo = await PackageInfo.fromPlatform();
     final majorVersion = int.parse(packageInfo.version.split('.').first);
 
-    return openDatabase(
+    final db = await openDatabase(
       dbFilePath,
       version: majorVersion,
       onCreate: (db, version) async {
@@ -149,6 +150,15 @@ class DatabaseHelper {
         await batch.commit(noResult: true);
       },
     );
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableNameAppSettings (
+        SettingKey TEXT PRIMARY KEY,
+        SettingValue INTEGER
+      )
+    ''');
+
+    return db;
   }
 
   Future<void> insertTimer(TimerModel timer) async {
@@ -247,6 +257,28 @@ class DatabaseHelper {
       tableNameSettings,
       where: 'SettingId = ?',
       whereArgs: [id],
+    );
+  }
+
+  Future<int?> getAppSettingValue(String key) async {
+    final db = await database;
+    final maps = await db.query(
+      tableNameAppSettings,
+      columns: ['SettingValue'],
+      where: 'SettingKey = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first['SettingValue'] as int?;
+  }
+
+  Future<void> saveAppSettingValue(String key, int value) async {
+    final db = await database;
+    await db.insert(
+      tableNameAppSettings,
+      {'SettingKey': key, 'SettingValue': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
