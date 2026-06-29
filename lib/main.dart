@@ -1235,6 +1235,7 @@ class HomePageState extends State<HomePage> {
               ],
       ),
       body: ListView.builder(
+        padding: const EdgeInsets.only(bottom: 150.0),
         itemCount: timerEntries.length + (hasHelperTimers ? 1 : 0),
         itemBuilder: (context, index) {
           if (hasHelperTimers && index == 0) {
