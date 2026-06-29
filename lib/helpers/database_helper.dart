@@ -113,6 +113,7 @@ class DatabaseHelper {
             TimerName TEXT,
             UpgradeType TEXT,
             UpgradeLevel INTEGER,
+            Extra INTEGER DEFAULT 0,
             ReadyDateTime TEXT
           )
         ''');
@@ -158,7 +159,23 @@ class DatabaseHelper {
       )
     ''');
 
+    await _ensureTimerTableHasExtraColumn(db);
+
     return db;
+  }
+
+  //Temp code to migrate from prior DB table version - can remove for next release
+  Future<void> _ensureTimerTableHasExtraColumn(Database db) async {
+    final List<Map<String, dynamic>> columns =
+        await db.rawQuery('PRAGMA table_info($tableNameTimers)');
+    final bool hasExtraColumn = columns
+        .any((column) => column['name']?.toString().toLowerCase() == 'extra');
+
+    if (!hasExtraColumn) {
+      await db.execute(
+        'ALTER TABLE $tableNameTimers ADD COLUMN Extra INTEGER DEFAULT 0',
+      );
+    }
   }
 
   Future<void> insertTimer(TimerModel timer) async {

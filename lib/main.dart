@@ -289,6 +289,7 @@ class HomePageState extends State<HomePage> {
           timerName: t['timerName'] ?? 'unknown_${t['upgradeId']}',
           upgradeType: t['upgradeType'],
           upgradeLevel: t['upgradeLevel'] ?? 0,
+          isExtra: t['isExtra'] ?? false,
           readyDateTime: t['readyDateTime'],
         );
 
@@ -523,6 +524,10 @@ class HomePageState extends State<HomePage> {
                   ? await dbHelper.getUpgradeName(upgradeId)
                   : null;
               final upgradeLevel = item['lvl'] + 1;
+              final bool isExtra = item.containsKey('extra') &&
+                  (item['extra'] == true ||
+                      item['extra'] == 1 ||
+                      item['extra'] == 'true');
               Duration duration = Duration(seconds: item['timer']);
               final readyDateTime = exportTime.add(duration);
 
@@ -545,6 +550,7 @@ class HomePageState extends State<HomePage> {
                 'timerName': upgradeName,
                 'upgradeType': upgradeType,
                 'upgradeLevel': upgradeLevel,
+                'isExtra': isExtra,
                 'readyDateTime': processedReadyDateTime,
               });
             }
@@ -1457,13 +1463,31 @@ class HomePageState extends State<HomePage> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(
-                    timeDisplay,
-                    style: TextStyle(
-                      color: _getUpgradeTimeColour(readyDateTime),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (timer.isExtra) ...[
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6.0),
+                          child: Tooltip(
+                            message: 'Extra upgrade',
+                            child: Icon(
+                              Icons.priority_high,
+                              size: 18,
+                              color: Colors.lightGreenAccent,
+                            ),
+                          ),
+                        ),
+                      ],
+                      Text(
+                        timeDisplay,
+                        style: TextStyle(
+                          color: _getUpgradeTimeColour(readyDateTime),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
